@@ -7,7 +7,7 @@ import { IconBack, IconDots, IconBolt, IconDownload } from "@/components/icons";
 import { useGetNoteQuery, useUpdateNoteMutation } from "@/lib/services/notesApi";
 import { useGenerateLessonNoteMutation, useRegenerateMutation } from "@/lib/services/generateApi";
 import { useGetWalletQuery } from "@/lib/services/walletApi";
-import type { LessonPlan, LessonNote, LessonPlanStep, LessonNoteBodySection } from "@/lib/types";
+import type { LessonPlan, LessonNote } from "@/lib/types";
 
 // ── Floating Format Toolbar ──────────────────────────────────────────
 

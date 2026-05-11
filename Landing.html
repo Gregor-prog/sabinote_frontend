@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SabiNote — NERDC-compliant lesson notes, generated in seconds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="landing.css" />
+</head>
+<body>
+
+<!-- ─── NAV ─────────────────────────────────────────── -->
+<header class="nav" id="nav">
+  <div class="nav__inner">
+    <a class="brand" href="#">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28">
+          <defs>
+            <linearGradient id="brand-grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7C3AED"/>
+              <stop offset="1" stop-color="#0D9488"/>
+            </linearGradient>
+          </defs>
+          <rect x="2" y="2" width="28" height="28" rx="9" fill="url(#brand-grad)"/>
+          <path d="M10 21 L10 11 L16 17 L22 11 L22 21" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </span>
+      <span class="brand__word">SabiNote</span>
+      <span class="brand__by">by ParaLearn</span>
+    </a>
+
+    <nav class="nav__links" aria-label="Primary">
+      <a href="#use-cases">Use cases</a>
+      <a href="#how">How it works</a>
+      <a href="#features">Why SabiNote</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+
+    <div class="nav__actions">
+      <a class="btn btn--ghost" href="#">Log in</a>
+      <a class="btn btn--primary" href="#">Start free
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8m0 0L8 4m3 3-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ─── HERO ────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero__bg" aria-hidden="true">
+    <div class="hero__blob hero__blob--1"></div>
+    <div class="hero__blob hero__blob--2"></div>
+    <div class="hero__grid"></div>
+  </div>
+
+  <div class="container hero__inner">
+    <div class="hero__text reveal">
+      <span class="pill pill--brand">
+        <span class="pill__dot"></span>
+        Built for the Sovereign Scholar
+      </span>
+
+      <h1 class="hero__title">
+        NERDC&#8209;compliant<br/>
+        lesson notes,<br/>
+        <span class="accent-text">generated in seconds.</span>
+      </h1>
+
+      <p class="hero__sub">
+        Eliminate hours of manual planning. SabiNote pulls your state's
+        official scheme of work and writes a complete, classroom-ready
+        lesson note — yours to refine, export, and teach from today.
+      </p>
+
+      <div class="hero__cta">
+        <a class="btn btn--primary btn--lg" href="#">
+          Start generating for free
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn btn--secondary btn--lg" href="#">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 3v8l7-4-7-4Z" fill="currentColor"/></svg>
+          Watch 2-min demo
+        </a>
+      </div>
+
+      <div class="hero__proof">
+        <div class="avatars">
+          <span class="avatar" style="background:#A78BFA">A</span>
+          <span class="avatar" style="background:#F97316">B</span>
+          <span class="avatar" style="background:#0D9488">C</span>
+          <span class="avatar" style="background:#641BC4">F</span>
+          <span class="avatar" style="background:#FBBF24;color:#0F0A1E">+</span>
+        </div>
+        <div class="proof__text">
+          <strong>4,000+ Nigerian educators</strong>
+          <span>★★★★★ 4.9 · 200+ reviews</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero__preview reveal" aria-hidden="true">
+      <!-- Floating lesson note card -->
+      <div class="preview-card">
+        <div class="preview-card__chrome">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="preview-card__url">sabinote.app/notes/multiplication-jss1</span>
+          <span class="preview-card__save"><span class="save-dot"></span> Saved just now</span>
+        </div>
+        <div class="preview-card__body">
+          <div class="preview-tagline">
+            <span class="tag tag--brand">Mathematics</span>
+            <span class="tag">JSS 1</span>
+            <span class="tag">Term 1 · Wk 3</span>
+            <span class="tag tag--teal">Lagos State</span>
+          </div>
+          <h3 class="preview-title">Whole Numbers — Multiplication &amp; Division</h3>
+
+          <div class="preview-section">
+            <div class="preview-h">Behavioural objectives</div>
+            <div class="preview-line preview-line--type" style="width:92%"></div>
+            <div class="preview-line preview-line--type" style="width:78%"></div>
+            <div class="preview-line preview-line--type" style="width:85%"></div>
+          </div>
+
+          <div class="preview-section">
+            <div class="preview-h">Worked example</div>
+            <pre class="preview-mono">  4,326
+×    47
+──────
+  30,282
++173,040
+──────
+  203,322  <span class="check">✓</span></pre>
+          </div>
+
+          <div class="preview-section">
+            <div class="preview-h">Common misconceptions</div>
+            <div class="preview-line" style="width:95%"></div>
+            <div class="preview-line" style="width:62%"></div>
+          </div>
+
+          <div class="preview-cta">
+            <span class="parats-cost">⚡ Generated · <strong>20 ₽</strong></span>
+            <span class="export-btn">Export ↓</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating chips -->
+      <div class="float-chip float-chip--1">
+        <span class="chip-icon" style="background:#EDE9FE;color:#641BC4">✦</span>
+        <div>
+          <strong>State curriculum</strong>
+          <span>Auto-fetched from NERDC</span>
+        </div>
+      </div>
+      <div class="float-chip float-chip--2">
+        <span class="chip-icon" style="background:#CCFBF1;color:#0D9488">✓</span>
+        <div>
+          <strong>Plan ready in 8s</strong>
+          <span>Then refine on canvas</span>
+        </div>
+      </div>
+      <div class="float-chip float-chip--3">
+        <span class="chip-icon" style="background:#FEF3C7;color:#B45309">↓</span>
+        <div>
+          <strong>PDF · DOCX</strong>
+          <span>One-click export</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TRUST MARQUEE ───────────────────────────────── -->
+<section class="trust">
+  <div class="container">
+    <p class="trust__label">Aligned with curricula across</p>
+    <div class="marquee">
+      <div class="marquee__track">
+        <span>Lagos State</span><span>·</span>
+        <span>Oyo State</span><span>·</span>
+        <span>Kano State</span><span>·</span>
+        <span>Rivers State</span><span>·</span>
+        <span>Kaduna State</span><span>·</span>
+        <span>Enugu State</span><span>·</span>
+        <span>FCT Abuja</span><span>·</span>
+        <span>Anambra State</span><span>·</span>
+        <span>Ogun State</span><span>·</span>
+        <span>Cross River</span><span>·</span>
+        <span>Edo State</span><span>·</span>
+        <span>Plateau State</span><span>·</span>
+        <!-- duplicate for seamless loop -->
+        <span>Lagos State</span><span>·</span>
+        <span>Oyo State</span><span>·</span>
+        <span>Kano State</span><span>·</span>
+        <span>Rivers State</span><span>·</span>
+        <span>Kaduna State</span><span>·</span>
+        <span>Enugu State</span><span>·</span>
+        <span>FCT Abuja</span><span>·</span>
+        <span>Anambra State</span><span>·</span>
+        <span>Ogun State</span><span>·</span>
+        <span>Cross River</span><span>·</span>
+        <span>Edo State</span><span>·</span>
+        <span>Plateau State</span><span>·</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── USE CASES ───────────────────────────────────── -->
+<section class="section" id="use-cases">
+  <div class="container">
+    <div class="section__head">
+      <span class="pill">✦ Use cases</span>
+      <h2 class="section__title">One tool. Every<br/>lesson moment.</h2>
+      <p class="section__sub">SabiNote handles the heavy lifting across the full teaching workflow — from
+        weekly planning to printable hand-outs.</p>
+    </div>
+
+    <div class="usecase-grid">
+      <article class="usecase usecase--lg">
+        <div class="usecase__icon" style="background:#EDE9FE;color:#5B21B6">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Weekly lesson plans</h3>
+        <p>Pick your state, subject, class and week — SabiNote pulls the exact NERDC scheme of work and drafts a structured plan with objectives, materials and assessment.</p>
+        <div class="usecase__meta"><span class="parats">8 ₽</span><span>per plan</span></div>
+      </article>
+
+      <article class="usecase usecase--lg usecase--dark">
+        <div class="usecase__icon" style="background:rgba(252,211,77,.15);color:#FCD34D">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M13 3 4 14h7l-1 7 9-11h-7l1-7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Full lesson notes with worked examples</h3>
+        <p>Promote a plan into a complete teacher-ready note — narrative introduction, sub-topics, worked maths, common misconceptions and assignment.</p>
+        <div class="usecase__meta"><span class="parats parats--accent">20 ₽</span><span>plan + note</span></div>
+      </article>
+
+      <article class="usecase">
+        <div class="usecase__icon" style="background:#CCFBF1;color:#0D9488">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>State-aware curriculum</h3>
+        <p>Lagos teaches it differently from Kano — and SabiNote knows.</p>
+      </article>
+
+      <article class="usecase">
+        <div class="usecase__icon" style="background:#FEF3C7;color:#B45309">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v12H4z M4 16l4-4 3 3 4-5 5 6" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        <h3>Refine on canvas</h3>
+        <p>Edit any AI draft on a focused, auto-saving rich-text canvas.</p>
+      </article>
+
+      <article class="usecase">
+        <div class="usecase__icon" style="background:#DBEAFE;color:#1D4ED8">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Export PDF or DOCX</h3>
+        <p>One click to share with your HOD or print for class.</p>
+      </article>
+
+      <article class="usecase">
+        <div class="usecase__icon" style="background:#FCE7F3;color:#9D174D">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v3H4z M4 11h16v8H4z M8 8v3M16 8v3" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Note library</h3>
+        <p>Every generated note saved, searchable and re-exportable.</p>
+      </article>
+
+      <article class="usecase">
+        <div class="usecase__icon" style="background:#D1FAE5;color:#047857">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3z M3 11h18M7 15h2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>$Parats wallet</h3>
+        <p>Pay only for what you generate. No subscriptions.</p>
+      </article>
+
+      <article class="usecase">
+        <div class="usecase__icon" style="background:#E0E7FF;color:#3730A3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 19V5l8 4 8-4v14l-8-4-8 4Z M12 9v10" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Reference textbook match</h3>
+        <p>Auto-suggests the standard textbook for each topic.</p>
+      </article>
+
+      <article class="usecase">
+        <div class="usecase__icon" style="background:#FFE4E6;color:#9F1239">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Difficulty tiers</h3>
+        <p>Basic, Standard or Advanced — match your class.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ────────────────────────────────── -->
+<section class="section section--soft" id="how">
+  <div class="container">
+    <div class="section__head section__head--center">
+      <span class="pill">How it works</span>
+      <h2 class="section__title">From curriculum<br/>to classroom in 3 steps.</h2>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step__num">01</div>
+        <h3>Configure your lesson</h3>
+        <p>Pick state, subject, class, term and week. SabiNote pulls the official scheme of work automatically — no copy-pasting from PDFs.</p>
+        <div class="step__visual">
+          <div class="config-row"><span>Subject</span><span class="config-val">Mathematics</span></div>
+          <div class="config-row"><span>Class</span><span class="config-val">JSS 1</span></div>
+          <div class="config-row"><span>Term · Week</span><span class="config-val">Term 1 · Week 3</span></div>
+          <div class="config-row config-row--ok"><span>✓ Lagos State</span><span>curriculum matched</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step__num">02</div>
+        <h3>AI drafts your plan</h3>
+        <p>Our RAG pipeline grounds every output in your state's verified scheme of work. You get a structured plan in under 10 seconds.</p>
+        <div class="step__visual step__visual--gen">
+          <div class="gen-orb"></div>
+          <div class="gen-status">Fetching Week 3 scheme of work...</div>
+          <div class="gen-bar"><div class="gen-bar__fill"></div></div>
+          <div class="gen-stages">
+            <span class="done">Curriculum DB</span>
+            <span class="done">RAG retrieval</span>
+            <span class="active">Structuring</span>
+            <span>Quality check</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step__num">03</div>
+        <h3>Refine &amp; export</h3>
+        <p>Edit on the auto-saving canvas, generate the full note when ready, then export as PDF or DOCX. Every keystroke is preserved.</p>
+        <div class="step__visual step__visual--export">
+          <div class="export-row"><span class="export-icon" style="background:#FEE2E2;color:#B91C1C">PDF</span><div><strong>Multiplication_JSS1.pdf</strong><span>Ready · 4 pages</span></div></div>
+          <div class="export-row"><span class="export-icon" style="background:#DBEAFE;color:#1E40AF">DOCX</span><div><strong>Multiplication_JSS1.docx</strong><span>Editable · Word</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES (DARK) ─────────────────────────────── -->
+<section class="section section--dark" id="features">
+  <div class="container">
+    <div class="section__head">
+      <span class="pill pill--teal">✦ Why SabiNote</span>
+      <h2 class="section__title section__title--light">Intelligence grounded<br/>in your state's curriculum.</h2>
+    </div>
+
+    <div class="feature">
+      <div class="feature__text">
+        <h3>State-based RAG pipeline</h3>
+        <p>SabiNote doesn't guess. It retrieves the exact week's scheme of work from your state's curriculum database — Lagos, Ogun, Kano, or wherever you teach — and grounds every AI output in verified, NERDC-approved content.</p>
+        <ul class="feature__list">
+          <li><span class="bullet"></span>36 state curricula indexed and updated</li>
+          <li><span class="bullet"></span>Citations link to source documents</li>
+          <li><span class="bullet"></span>Difficulty tiers: Basic / Standard / Advanced</li>
+        </ul>
+      </div>
+      <div class="feature__visual">
+        <div class="rag-diagram">
+          <div class="rag-node rag-node--1">
+            <span class="rag-label">Your state</span>
+            <span class="rag-value">Lagos</span>
+          </div>
+          <div class="rag-flow"></div>
+          <div class="rag-node rag-node--2">
+            <span class="rag-label">Curriculum DB</span>
+            <span class="rag-value">NERDC ✓</span>
+          </div>
+          <div class="rag-flow"></div>
+          <div class="rag-node rag-node--3">
+            <span class="rag-label">AI engine</span>
+            <span class="rag-value">RAG-grounded</span>
+          </div>
+          <div class="rag-flow"></div>
+          <div class="rag-node rag-node--4 rag-node--accent">
+            <span class="rag-label">Lesson note</span>
+            <span class="rag-value">Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature feature--reverse">
+      <div class="feature__text">
+        <h3>Human-in-the-loop canvas</h3>
+        <p>You stay in control. Review and edit the AI-drafted lesson plan before committing to the full note. Our rich-text canvas auto-saves every keystroke, so nothing is ever lost.</p>
+        <ul class="feature__list">
+          <li><span class="bullet"></span>Auto-save on every keystroke</li>
+          <li><span class="bullet"></span>Floating selection toolbar</li>
+          <li><span class="bullet"></span>Two-phase: plan first, then full note</li>
+        </ul>
+      </div>
+      <div class="feature__visual">
+        <div class="canvas-mock">
+          <div class="canvas-mock__bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="canvas-save"><span class="save-dot"></span> Saved · auto</span>
+          </div>
+          <div class="canvas-mock__body">
+            <div class="canvas-h">## Behavioural objectives</div>
+            <div class="canvas-l" style="width:90%"></div>
+            <div class="canvas-l" style="width:74%"></div>
+            <div class="canvas-l" style="width:82%"></div>
+            <div class="canvas-h">## Development</div>
+            <div class="canvas-l" style="width:95%"></div>
+            <div class="canvas-l" style="width:60%"></div>
+            <div class="canvas-l canvas-l--editing" style="width:78%">
+              <span class="caret"></span>
+            </div>
+            <div class="canvas-toolbar">
+              <span>B</span><span><em>I</em></span><span>U</span><span>H₂</span><span>•</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PRICING ─────────────────────────────────────── -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section__head section__head--center">
+      <span class="pill">💰 Simple pricing</span>
+      <h2 class="section__title">Pay only for what<br/>you generate.</h2>
+      <p class="section__sub">No subscriptions. No hidden fees. Just $Parats — top up once, generate when you need.</p>
+    </div>
+
+    <div class="parats-bar">
+      <div><span class="parats-bar__num">8 ₽</span> Lesson plan</div>
+      <div class="parats-bar__sep"></div>
+      <div><span class="parats-bar__num">12 ₽</span> Lesson note</div>
+      <div class="parats-bar__sep"></div>
+      <div><span class="parats-bar__num">20 ₽</span> Full package</div>
+    </div>
+
+    <div class="pricing-grid">
+      <article class="pricing">
+        <div class="pricing__head">
+          <span class="pricing__name">Starter</span>
+          <span class="pricing__sub">Try it out</span>
+        </div>
+        <div class="pricing__price"><span class="amount">50 ₽</span><span class="cur">₦250</span></div>
+        <ul class="pricing__list">
+          <li>≈ 6 lesson plans</li>
+          <li>≈ 2 full packages</li>
+          <li>All subjects &amp; classes</li>
+          <li>PDF + DOCX export</li>
+        </ul>
+        <a class="btn btn--secondary btn--full" href="#">Get Starter</a>
+      </article>
+
+      <article class="pricing pricing--featured">
+        <span class="pricing__badge">Most popular</span>
+        <div class="pricing__head">
+          <span class="pricing__name">Teacher</span>
+          <span class="pricing__sub">Weekly use</span>
+        </div>
+        <div class="pricing__price"><span class="amount">100 ₽</span><span class="cur">₦500</span></div>
+        <ul class="pricing__list">
+          <li>≈ 12 lesson plans</li>
+          <li>≈ 5 full packages</li>
+          <li>Priority generation</li>
+          <li>Note library &amp; search</li>
+          <li>Email support</li>
+        </ul>
+        <a class="btn btn--primary btn--full" href="#">Get Teacher</a>
+      </article>
+
+      <article class="pricing">
+        <div class="pricing__head">
+          <span class="pricing__name">School</span>
+          <span class="pricing__sub">Departments</span>
+        </div>
+        <div class="pricing__price"><span class="amount">500 ₽</span><span class="cur">₦2,000</span></div>
+        <ul class="pricing__list">
+          <li>≈ 25 full packages</li>
+          <li>Best value per ₽</li>
+          <li>Bulk export (.zip)</li>
+          <li>Shared school library*</li>
+          <li>Dedicated support</li>
+        </ul>
+        <a class="btn btn--secondary btn--full" href="#">Get School</a>
+      </article>
+    </div>
+    <p class="pricing-foot">* Shared library coming soon. All purchases secured by Paystack.</p>
+  </div>
+</section>
+
+<!-- ─── TESTIMONIALS ────────────────────────────────── -->
+<section class="section section--soft">
+  <div class="container">
+    <div class="section__head section__head--center">
+      <span class="pill">❤ Loved by educators</span>
+      <h2 class="section__title">Real teachers.<br/>Real time saved.</h2>
+    </div>
+
+    <div class="t-grid">
+      <article class="t-card">
+        <div class="t-stars">★★★★★</div>
+        <p>"My Friday evenings used to disappear into lesson planning. SabiNote drafts my whole week's notes before I finish my tea — and they actually match the Lagos scheme."</p>
+        <footer>
+          <span class="t-avatar" style="background:#A78BFA">A</span>
+          <div><strong>Mrs. Adaeze Nwosu</strong><span>Chemistry · Ikeja, Lagos</span></div>
+        </footer>
+      </article>
+
+      <article class="t-card">
+        <div class="t-stars">★★★★★</div>
+        <p>"The worked examples are pure gold. I used to type long-multiplication out by hand. Now I tweak SabiNote's draft, export to PDF, print — done."</p>
+        <footer>
+          <span class="t-avatar" style="background:#F97316">B</span>
+          <div><strong>Mr. Babatunde Olawale</strong><span>Mathematics · Ibadan, Oyo</span></div>
+        </footer>
+      </article>
+
+      <article class="t-card">
+        <div class="t-stars">★★★★★</div>
+        <p>"What sold me was that it knew the Kano-state textbook. No re-aligning, no second-guessing. My HOD has stopped sending notes back for revision."</p>
+        <footer>
+          <span class="t-avatar" style="background:#0D9488">F</span>
+          <div><strong>Mrs. Fatima Al-Hassan</strong><span>English · Kano</span></div>
+        </footer>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FINAL CTA ───────────────────────────────────── -->
+<section class="cta-final">
+  <div class="cta-bg" aria-hidden="true">
+    <div class="cta-ring cta-ring--1"></div>
+    <div class="cta-ring cta-ring--2"></div>
+    <div class="cta-ring cta-ring--3"></div>
+  </div>
+  <div class="container cta-final__inner">
+    <h2 class="cta-final__title">Ready to reclaim<br/>your teaching time?</h2>
+    <p class="cta-final__sub">Join thousands of Nigerian educators generating curriculum-compliant lesson notes in seconds.</p>
+    <div class="cta-final__btns">
+      <a class="btn btn--primary btn--xl" href="#">
+        Start free — no card needed
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a class="btn btn--ghost btn--ghost--light btn--xl" href="#">See how it works first →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ──────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container footer__inner">
+    <div class="footer__brand">
+      <a class="brand brand--light" href="#">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="28" height="28">
+            <rect x="2" y="2" width="28" height="28" rx="9" fill="url(#brand-grad)"/>
+            <path d="M10 21 L10 11 L16 17 L22 11 L22 21" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </span>
+        <span class="brand__word">SabiNote</span>
+      </a>
+      <p>Made with care for Nigerian educators.<br/>A ParaLearn product.</p>
+    </div>
+    <div class="footer__cols">
+      <div>
+        <span class="footer__h">Product</span>
+        <a href="#use-cases">Use cases</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#">Changelog</a>
+      </div>
+      <div>
+        <span class="footer__h">Company</span>
+        <a href="#">About ParaLearn</a>
+        <a href="#">Blog</a>
+        <a href="#">Careers</a>
+        <a href="#">Contact</a>
+      </div>
+      <div>
+        <span class="footer__h">Legal</span>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Refund policy</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer__bottom">
+    <div class="container footer__bottom-inner">
+      <span>© 2026 ParaLearn Technologies. All rights reserved.</span>
+      <div class="footer__socials">
+        <a href="#" aria-label="X"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2H21l-6.52 7.45L22 22h-6.84l-4.76-6.23L4.8 22H2l7.05-8.05L1.5 2h7l4.31 5.7L18.244 2Zm-1.2 18h1.86L7.06 4H5.1l11.94 16Z"/></svg></a>
+        <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5ZM.22 8h4.56v14H.22V8Zm7.86 0h4.37v1.92h.06c.61-1.15 2.1-2.36 4.32-2.36 4.62 0 5.47 3.04 5.47 7v7.44h-4.55V15.5c0-1.7-.03-3.88-2.36-3.88-2.37 0-2.73 1.85-2.73 3.76V22H8.08V8Z"/></svg></a>
+        <a href="#" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16ZM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63a5.86 5.86 0 0 0-2.13 1.38A5.86 5.86 0 0 0 .63 4.14C.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.31.79.73 1.46 1.38 2.13a5.87 5.87 0 0 0 2.13 1.38c.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56a5.87 5.87 0 0 0 2.13-1.38 5.87 5.87 0 0 0 1.38-2.13c.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91a5.86 5.86 0 0 0-1.38-2.13A5.86 5.86 0 0 0 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0Zm0 5.84a6.16 6.16 0 1 0 0 12.32 6.16 6.16 0 0 0 0-12.32ZM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm6.4-11.85a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88Z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="landing.js"></script>
+</body>
+</html>

@@ -55,14 +55,11 @@ function DesktopSidebar({
     <aside className="hidden lg:flex flex-col w-64 xl:w-72 h-screen sticky top-0 border-r border-gray-100 bg-white shrink-0">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-gray-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-(--color-primary) flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span className="font-display font-bold text-[17px] text-gray-900 tracking-tight">SabiNote</span>
-        </div>
+        <img
+          src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1778556077/WhatsApp_Image_2026-05-11_at_11.32.06_PM_iyv0vh.jpg"
+          alt="SabiNote"
+          className="h-8 w-auto object-contain"
+        />
       </div>
 
       {/* Nav */}

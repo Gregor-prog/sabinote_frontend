@@ -93,10 +93,11 @@ export default function RegisterPage() {
         />
         <div className="relative">
           <div className="flex items-center gap-2 mb-16">
-            <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#641BC4" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
-            </span>
-            <span className="font-display font-bold text-xl text-white">SabiNote</span>
+            <img
+              src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1778556077/WhatsApp_Image_2026-05-11_at_11.32.06_PM_iyv0vh.jpg"
+              alt="SabiNote"
+              className="h-9 w-auto object-contain"
+            />
           </div>
           <div
             className="rounded-2xl p-8 mb-8"
@@ -124,10 +125,11 @@ export default function RegisterPage() {
       <div className="flex-1 flex items-start justify-center p-6 overflow-y-auto">
         <div className="w-full max-w-sm py-8">
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#641BC4" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
-            </span>
-            <span className="font-display font-bold text-xl text-gray-900">SabiNote</span>
+            <img
+              src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1778556077/WhatsApp_Image_2026-05-11_at_11.32.06_PM_iyv0vh.jpg"
+              alt="SabiNote"
+              className="h-8 w-auto object-contain"
+            />
           </div>
 
           <h2 className="font-display font-bold text-3xl text-gray-900 mb-1" style={{ letterSpacing: "-0.02em" }}>

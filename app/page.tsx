@@ -3,26 +3,15 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 
-/* ── Brand logo SVG (reused in nav + footer) ───────────────────── */
-function BrandMark({ size = 28 }: { size?: number }) {
+/* ── Brand logo image (reused in nav + footer) ───────────────────── */
+const LOGO_URL = "https://res.cloudinary.com/drh4ma3hj/image/upload/v1778556077/WhatsApp_Image_2026-05-11_at_11.32.06_PM_iyv0vh.jpg";
+function BrandMark({ height = 32 }: { height?: number }) {
   return (
-    <svg viewBox="0 0 32 32" width={size} height={size}>
-      <defs>
-        <linearGradient id="brand-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#7C3AED" />
-          <stop offset="1" stopColor="#0D9488" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="28" height="28" rx="9" fill="url(#brand-grad)" />
-      <path
-        d="M10 21 L10 11 L16 17 L22 11 L22 21"
-        stroke="#fff"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
+    <img
+      src={LOGO_URL}
+      alt="SabiNote"
+      style={{ height, width: "auto", objectFit: "contain", display: "block" }}
+    />
   );
 }
 
@@ -214,8 +203,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between gap-6">
           {/* Brand */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <BrandMark />
-            <span className="font-display font-bold text-gray-900 text-lg">SabiNote</span>
+            <BrandMark height={32} />
             <span className="text-gray-400 text-sm hidden sm:block">by ParaLearn</span>
           </Link>
 
@@ -781,8 +769,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
             <div className="col-span-2 lg:col-span-1">
               <Link href="/" className="flex items-center gap-2 mb-3">
-                <BrandMark />
-                <span className="font-display font-bold text-white">SabiNote</span>
+                <BrandMark height={28} />
               </Link>
               <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
                 Made with care for Nigerian educators.<br />A ParaLearn product.

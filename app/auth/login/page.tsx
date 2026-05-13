@@ -75,7 +75,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative flex flex-wrap gap-2">
-          {["✦ State Curriculum DB", "✦ RAG-Powered", "✦ NERDC-Compliant"].map((pill, i) => (
+          {["✦ Curriculum-Aligned", "✦ AI-Powered", "✦ Built for Nigeria"].map((pill, i) => (
             <span key={i} className="px-3 py-1 rounded-full text-xs font-medium text-white/60" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
               {pill}
             </span>

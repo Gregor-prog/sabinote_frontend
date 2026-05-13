@@ -454,7 +454,7 @@ export default function LandingPage() {
                   <div className="h-full rounded-full" style={{ background: "linear-gradient(90deg,#7C3AED,#14B8A6)", animation: "genFill 2.5s ease-out forwards" }} />
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  {[["Curriculum DB","done"],["RAG retrieval","done"],["Structuring","active"],["Quality check",""]].map(([s, state], i) => (
+                  {[["Curriculum","done"],["Matching","done"],["Structuring","active"],["Quality check",""]].map(([s, state], i) => (
                     <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{
                       background: state === "done" ? "rgba(16,185,129,0.2)" : state === "active" ? "rgba(100,27,196,0.3)" : "rgba(255,255,255,0.08)",
                       color: state === "done" ? "#10B981" : state === "active" ? "#A78BFA" : "rgba(255,255,255,0.4)",
@@ -510,9 +510,9 @@ export default function LandingPage() {
           {/* Feature 1 — RAG pipeline */}
           <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
             <div>
-              <h3 className="font-display font-bold text-white text-2xl mb-4">State-based RAG pipeline</h3>
+              <h3 className="font-display font-bold text-white text-2xl mb-4">Built on your state's curriculum</h3>
               <p className="text-sm leading-relaxed mb-6" style={{ color: "rgba(255,255,255,0.6)" }}>
-                SabiNote doesn't guess. It retrieves the exact week's scheme of work from your state's curriculum database — Lagos, Ogun, Kano, or wherever you teach — and grounds every AI output in verified, NERDC-approved content.
+                SabiNote doesn't guess. It matches every lesson to the exact week's scheme of work for your state — Lagos, Ogun, Kano, or wherever you teach — so every output is curriculum-aligned and classroom-ready.
               </p>
               <ul className="space-y-2.5">
                 {["36 state curricula indexed and updated","Citations link to source documents","Difficulty tiers: Basic / Standard / Advanced"].map((item, i) => (
@@ -528,8 +528,8 @@ export default function LandingPage() {
               <div className="flex flex-col gap-3">
                 {[
                   { label: "Your state", value: "Lagos", color: "#A78BFA", bg: "rgba(167,139,250,0.15)" },
-                  { label: "Curriculum DB", value: "NERDC ✓", color: "#14B8A6", bg: "rgba(20,184,166,0.15)" },
-                  { label: "AI engine", value: "RAG-grounded", color: "#FBBF24", bg: "rgba(251,191,36,0.15)" },
+                  { label: "Curriculum", value: "Matched ✓", color: "#14B8A6", bg: "rgba(20,184,166,0.15)" },
+                  { label: "Generating", value: "In progress…", color: "#FBBF24", bg: "rgba(251,191,36,0.15)" },
                   { label: "Lesson note", value: "Ready", color: "#10B981", bg: "rgba(16,185,129,0.2)", accent: true },
                 ].map((node, i) => (
                   <div key={i}>
@@ -777,7 +777,7 @@ export default function LandingPage() {
             </div>
             {[
               { title: "Product", links: [["#use-cases","Use cases"],["#features","Features"],["#pricing","Pricing"],["#","Changelog"]] },
-              { title: "Company", links: [["#","About ParaLearn"],["#","Blog"],["#","Careers"],["#","Contact"]] },
+              { title: "Company", links: [["#","About SabiNote"],["#","About Parakletus"],["#","Blog"],["#","Careers"],["#","Contact"]] },
               { title: "Legal", links: [["#","Privacy"],["#","Terms"],["#","Refund policy"]] },
             ].map((col, i) => (
               <div key={i}>
@@ -794,7 +794,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>© 2026 ParaLearn Technologies. All rights reserved.</span>
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>© 2026 Parakletus Technologies. All rights reserved.</span>
             <div className="flex gap-4">
               {/* X/Twitter */}
               <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors" style={{ color: "rgba(255,255,255,0.4)" }}>

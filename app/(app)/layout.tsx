@@ -54,12 +54,13 @@ function DesktopSidebar({
   return (
     <aside className="hidden lg:flex flex-col w-64 xl:w-72 h-screen sticky top-0 border-r border-gray-100 bg-white shrink-0">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-gray-100">
+      <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-1.5">
         <img
-          src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1778556077/WhatsApp_Image_2026-05-11_at_11.32.06_PM_iyv0vh.jpg"
+          src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1779473509/SabiNote_Purple_SVG_tlzlqm.svg"
           alt="SabiNote"
           className="h-8 w-auto object-contain"
         />
+        <span style={{ fontSize: "9px", color: "#9CA3AF", letterSpacing: "0.04em", lineHeight: 1, marginTop: "1px" }}>by Parakletus</span>
       </div>
 
       {/* Nav */}

@@ -17,13 +17,15 @@ import {
   IconShield,
 } from '@/components/icons'
 
+const LOGO_URL = "https://res.cloudinary.com/drh4ma3hj/image/upload/v1779473509/SabiNote_Purple_SVG_tlzlqm.svg"
+
 function SidebarLink({
   href,
   icon: Icon,
   label,
 }: {
   href: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
   label: string
 }) {
   const pathname = usePathname()
@@ -32,13 +34,13 @@ function SidebarLink({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-sm ${
-        active
-          ? 'bg-(--color-primary)/10 text-(--color-primary)'
-          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-      }`}
+      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-sm font-medium"
+      style={active
+        ? { background: "var(--color-primary-dim)", color: "oklch(40% 0.22 290)" }
+        : { color: "var(--color-text-muted)" }
+      }
     >
-      <Icon className="w-5 h-5 shrink-0" />
+      <Icon className="w-4.5 h-4.5 shrink-0" />
       <span>{label}</span>
     </Link>
   )
@@ -52,44 +54,58 @@ function DesktopSidebar({
   isAdmin: boolean
 }) {
   return (
-    <aside className="hidden lg:flex flex-col w-64 xl:w-72 h-screen sticky top-0 border-r border-gray-100 bg-white shrink-0">
+    <aside
+      className="hidden lg:flex flex-col w-60 xl:w-64 h-screen sticky top-0 shrink-0 bg-white"
+      style={{ borderRight: "1px solid var(--color-border)" }}
+    >
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-1.5">
-        <img
-          src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1779473509/SabiNote_Purple_SVG_tlzlqm.svg"
-          alt="SabiNote"
-          className="h-8 w-auto object-contain"
-        />
-        <span style={{ fontSize: "9px", color: "#9CA3AF", letterSpacing: "0.04em", lineHeight: 1, marginTop: "1px" }}>by Parakletus</span>
+      <div
+        className="px-5 py-4 flex items-center gap-2"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
+      >
+        <img src={LOGO_URL} alt="SabiNote" className="h-7 w-auto object-contain" />
+        <span style={{ fontSize: "9px", color: "var(--color-text-muted)", letterSpacing: "0.04em", lineHeight: 1, marginTop: "1px" }}>
+          by Parakletus
+        </span>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <p className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Menu</p>
-        <SidebarLink href="/dashboard" icon={IconHome} label="Dashboard" />
-        <SidebarLink href="/generate" icon={IconBolt} label="Generate" />
-        <SidebarLink href="/notes" icon={IconLibrary} label="Library" />
-        <SidebarLink href="/resources" icon={IconUpload} label="Resources" />
-        <SidebarLink href="/wallet" icon={IconWallet} label="Wallet" />
-        <SidebarLink href="/settings" icon={IconSettings} label="Settings" />
+        <p
+          className="px-3.5 py-2 text-[10px] font-semibold uppercase tracking-widest"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          Menu
+        </p>
+        <SidebarLink href="/dashboard" icon={IconHome}     label="Dashboard" />
+        <SidebarLink href="/generate"  icon={IconBolt}     label="Generate"  />
+        <SidebarLink href="/notes"     icon={IconLibrary}  label="Library"   />
+        <SidebarLink href="/resources" icon={IconUpload}   label="Resources" />
+        <SidebarLink href="/wallet"    icon={IconWallet}   label="Wallet"    />
+        <SidebarLink href="/settings"  icon={IconSettings} label="Settings"  />
 
         {isAdmin && (
           <>
-            <p className="px-4 pt-4 pb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Admin</p>
-            <SidebarLink href="/admin" icon={IconShield} label="Admin Panel" />
+            <p
+              className="px-3.5 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-widest"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Admin
+            </p>
+            <SidebarLink href="/admin" icon={IconShield} label="Admin panel" />
           </>
         )}
       </nav>
 
       {/* User footer */}
       {user && (
-        <div className="px-4 py-4 border-t border-gray-100">
+        <div className="px-4 py-4" style={{ borderTop: "1px solid var(--color-border)" }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-(--color-primary)/15 flex items-center justify-center shrink-0">
-              <span className="text-(--color-primary) font-bold text-sm">
-                {user.firstName[0]}
-                {user.lastName[0]}
-              </span>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs font-display"
+              style={{ background: "oklch(40% 0.22 290)", color: "white" }}
+            >
+              {user.firstName[0]}{user.lastName[0]}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
@@ -97,12 +113,17 @@ function DesktopSidebar({
                   {user.firstName} {user.lastName}
                 </p>
                 {isAdmin && (
-                  <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded bg-(--color-primary)/10 text-(--color-primary) uppercase tracking-wide">
+                  <span
+                    className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                    style={{ background: "var(--color-primary-dim)", color: "oklch(40% 0.22 290)" }}
+                  >
                     Admin
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
+                {user.email}
+              </p>
             </div>
           </div>
         </div>
@@ -112,36 +133,34 @@ function DesktopSidebar({
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
+  const router          = useRouter()
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
-  const user = useAppSelector(selectCurrentUser)
-  const isAdmin = user?.role === 'admin'
+  const user            = useAppSelector(selectCurrentUser)
+  const isAdmin         = user?.role === 'admin'
   const [mounted, setMounted] = useState(false)
 
   useGetMeQuery(undefined, { skip: !isAuthenticated })
 
   useEffect(() => {
     setMounted(true)
-    if (!isAuthenticated) {
-      router.replace('/auth/login')
-    }
+    if (!isAuthenticated) router.replace('/auth/login')
   }, [isAuthenticated, router])
 
-  if (!mounted) return null
-  if (!isAuthenticated) return null
+  if (!mounted || !isAuthenticated) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: "var(--color-surface)" }}>
+
       {/* Desktop layout */}
       <div className="hidden lg:flex h-screen overflow-hidden">
         <DesktopSidebar user={user} isAdmin={isAdmin} />
-        <main className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="max-w-4xl mx-auto px-8 py-8">{children}</div>
+        <main className="flex-1 overflow-y-auto" style={{ background: "var(--color-surface)" }}>
+          <div className="max-w-3xl mx-auto px-8 py-8">{children}</div>
         </main>
       </div>
 
-      {/* Mobile layout — centered 430px shell */}
-      <div className="lg:hidden flex items-center justify-center min-h-screen bg-gray-100">
+      {/* Mobile layout */}
+      <div className="lg:hidden flex items-center justify-center min-h-screen" style={{ background: "oklch(15% 0.02 290)" }}>
         <div className="app-screen shadow-2xl">
           <div className="flex-1 overflow-y-auto scrollbar-hidden">{children}</div>
           <TabBar />

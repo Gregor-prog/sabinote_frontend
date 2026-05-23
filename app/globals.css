@@ -41,6 +41,16 @@
   --color-dark: #0A0512;
   --color-dark-card: #140D2B;
 
+  /* OKLCH brand aliases (GPU-accurate) */
+  --color-primary: oklch(40% 0.22 290);
+  --color-primary-dim: oklch(40% 0.22 290 / 0.08);
+  --color-primary-soft: oklch(40% 0.22 290 / 0.12);
+  --color-primary-mid: oklch(40% 0.22 290 / 0.18);
+  --color-surface: oklch(98.5% 0.002 290);
+  --color-border: oklch(91% 0.003 290);
+  --color-text-primary: oklch(12% 0.01 290);
+  --color-text-muted: oklch(55% 0.008 290);
+
   /* Subject colors */
   --color-math-bg: #F3F0FF;
   --color-math-text: #641BC4;
@@ -67,8 +77,8 @@ html {
 }
 
 body {
-  background: #F5F5F7;
-  color: #0F0A1E;
+  background: var(--color-surface, oklch(98.5% 0.002 290));
+  color: var(--color-text-primary, oklch(12% 0.01 290));
   font-family: var(--font-inter, 'Inter', sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -106,7 +116,7 @@ body {
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.92); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -135,21 +145,17 @@ body {
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: scaleIn 0.25s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 .animate-marquee {
   animation: marquee 24s linear infinite;
 }
 
-/* Accent text gradient */
+/* Accent text — solid, intentional */
 .accent-text {
-  background: linear-gradient(90deg, #F97316, #FBBF24, #F97316);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradientSweep 4s linear infinite;
+  color: var(--color-accent-500, #F97316);
+  font-weight: 700;
 }
 
 /* Brand gradient */
@@ -259,6 +265,37 @@ body {
 .delay-400 { animation-delay: 400ms; }
 .delay-500 { animation-delay: 500ms; }
 .delay-600 { animation-delay: 600ms; }
+
+/* ── Custom easing curves ── */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+/* ── Button press feedback ── */
+button, [role="button"] {
+  transition: transform 140ms var(--ease-out), opacity 140ms var(--ease-out);
+}
+button:active:not(:disabled), [role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* ── Focus rings ── */
+:focus-visible {
+  outline: 2px solid oklch(40% 0.22 290);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px oklch(40% 0.22 290 / 0.3);
+}
+
+/* ── Touch hover guard ── */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift:hover { transform: translateY(-1px); }
+}
 
 /* Subject card colors */
 .subject-math { background-color: #F3F0FF; color: #641BC4; }

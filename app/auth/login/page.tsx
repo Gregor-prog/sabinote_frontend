@@ -8,6 +8,13 @@ import { useLoginMutation } from "@/lib/services/authApi";
 import { setCredentials } from "@/lib/slices/authSlice";
 import { useAppDispatch } from "@/lib/hooks";
 
+const LOGO_URL = "https://res.cloudinary.com/drh4ma3hj/image/upload/v1779473509/SabiNote_Purple_SVG_tlzlqm.svg";
+
+const TESTIMONIALS = [
+  { quote: "SabiNote saved me 4 hours every week. My lesson notes are better than anything I wrote manually.", name: "Mrs. Chioma Eze", role: "Biology · Anambra State" },
+  { quote: "The curriculum matching is exact. Week 7 Term 2 JSS3 Chemistry — precisely what our scheme says.", name: "Mr. Emeka Okafor", role: "Chemistry · Rivers State" },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -23,111 +30,108 @@ export default function LoginPage() {
     setError("");
     try {
       const res = await login({ email, password }).unwrap();
-      dispatch(
-        setCredentials({
-          user: res.data.user,
-          wallet: res.data.wallet,
-          accessToken: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
-        })
-      );
+      dispatch(setCredentials({
+        user: res.data.user,
+        wallet: res.data.wallet,
+        accessToken: res.data.accessToken,
+        refreshToken: res.data.refreshToken,
+      }));
       router.push("/dashboard");
     } catch (err: unknown) {
-      const msg =
-        (err as { data?: { message?: string } })?.data?.message ??
-        "Invalid email or password";
+      const msg = (err as { data?: { message?: string } })?.data?.message ?? "Invalid email or password";
       setError(msg);
     }
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: "#FAFAFA" }}>
-      {/* Left panel — desktop only */}
+    <div className="min-h-screen flex" style={{ background: "oklch(98.5% 0.002 290)" }}>
+
+      {/* ── Left panel — desktop only ── */}
       <div
-        className="hidden lg:flex flex-col justify-between w-[55%] p-12 relative overflow-hidden"
+        className="hidden lg:flex flex-col justify-between w-[52%] p-14 relative overflow-hidden"
         style={{ background: "#0A0512" }}
       >
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at 30% 60%, rgba(100,27,196,0.35) 0%, transparent 65%)" }}
-        />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-16">
-            <img
-              src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1778556077/WhatsApp_Image_2026-05-11_at_11.32.06_PM_iyv0vh.jpg"
-              alt="SabiNote"
-              className="h-9 w-auto object-contain"
-            />
-          </div>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 25% 55%, oklch(40% 0.22 290 / 0.4) 0%, transparent 60%)" }} />
 
-          <div className="space-y-8">
-            {[
-              { quote: "SabiNote saved me 4 hours every week. My lesson notes are now better than anything I could produce manually.", name: "Mrs. Chioma Eze", role: "Biology Teacher · Anambra State" },
-              { quote: "The curriculum matching is spot-on. Week 7 Term 2 JSS3 Chemistry — exactly what our scheme says.", name: "Mr. Emeka Okafor", role: "Chemistry · Rivers State" },
-            ].map((t, i) => (
-              <div key={i} className={`rounded-2xl p-6 transition-opacity ${i === 0 ? "opacity-100" : "opacity-50"}`} style={{ background: "#140D2B", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <p className="text-white/80 text-sm leading-relaxed italic mb-4">"{t.quote}"</p>
-                <div className="font-semibold text-white text-sm">{t.name}</div>
-                <div className="text-white/40 text-xs">{t.role}</div>
-              </div>
-            ))}
-          </div>
+        {/* Logo */}
+        <div className="relative flex items-center gap-2">
+          <img src={LOGO_URL} alt="SabiNote" className="h-8 w-auto object-contain" />
+          <span style={{ fontSize: "9px", color: "#6B7280", letterSpacing: "0.04em", lineHeight: 1, marginTop: "1px" }}>by Parakletus</span>
         </div>
 
+        {/* Testimonials */}
+        <div className="relative space-y-4">
+          {TESTIMONIALS.map((t, i) => (
+            <div
+              key={i}
+              className="rounded-2xl p-6"
+              style={{
+                background: "#140D2B",
+                border: "1px solid rgba(255,255,255,0.06)",
+                opacity: i === 0 ? 1 : 0.45,
+              }}
+            >
+              <p className="text-white/75 text-sm leading-relaxed mb-4">"{t.quote}"</p>
+              <p className="font-semibold text-white text-sm">{t.name}</p>
+              <p className="text-white/40 text-xs mt-0.5">{t.role}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom tags */}
         <div className="relative flex flex-wrap gap-2">
-          {["✦ Curriculum-Aligned", "✦ AI-Powered", "✦ Built for Nigeria"].map((pill, i) => (
-            <span key={i} className="px-3 py-1 rounded-full text-xs font-medium text-white/60" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
-              {pill}
+          {["Curriculum-aligned", "AI-powered", "Built for Nigeria"].map((tag) => (
+            <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium text-white/50" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+              {tag}
             </span>
           ))}
         </div>
       </div>
 
-      {/* Right panel — form */}
+      {/* ── Right panel ── */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
+
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <img
-              src="https://res.cloudinary.com/drh4ma3hj/image/upload/v1778556077/WhatsApp_Image_2026-05-11_at_11.32.06_PM_iyv0vh.jpg"
-              alt="SabiNote"
-              className="h-8 w-auto object-contain"
-            />
+          <div className="flex items-center gap-2 mb-10 lg:hidden">
+            <img src={LOGO_URL} alt="SabiNote" className="h-7 w-auto object-contain" />
+            <span style={{ fontSize: "9px", color: "#9CA3AF", letterSpacing: "0.04em" }}>by Parakletus</span>
           </div>
 
-          <h2 className="font-display font-bold text-3xl text-gray-900 mb-1" style={{ letterSpacing: "-0.02em" }}>
+          <h1 className="font-display font-bold text-gray-900 mb-1" style={{ fontSize: "1.9rem", letterSpacing: "-0.03em" }}>
             Welcome back.
-          </h2>
-          <p className="text-gray-500 text-sm mb-8">
-            Don't have an account?{" "}
-            <Link href="/auth/register" className="font-medium" style={{ color: "#641BC4" }}>Sign up →</Link>
+          </h1>
+          <p className="text-sm mb-8" style={{ color: "var(--color-text-muted)" }}>
+            No account?{" "}
+            <Link href="/auth/register" className="font-semibold" style={{ color: "oklch(40% 0.22 290)" }}>Create one →</Link>
           </p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-red-700 bg-red-50 border border-red-100">
+            <div className="mb-5 px-4 py-3 rounded-xl text-sm text-red-700 bg-red-50 border border-red-100">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="amaka@school.edu.ng"
-                className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 border border-gray-200 outline-none transition-all bg-white"
-                onFocus={e => (e.target.style.borderColor = "#641BC4")}
-                onBlur={e => (e.target.style.borderColor = "#E5E7EB")}
+                className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 border outline-none bg-white transition-shadow"
+                style={{ borderColor: "var(--color-border)" }}
+                onFocus={e => { e.target.style.borderColor = "oklch(40% 0.22 290)"; e.target.style.boxShadow = "0 0 0 3px oklch(40% 0.22 290 / 0.1)"; }}
+                onBlur={e => { e.target.style.borderColor = "var(--color-border)"; e.target.style.boxShadow = "none"; }}
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-gray-700">Password</label>
-                <Link href="/auth/forgot-password" className="text-xs" style={{ color: "#641BC4" }}>Forgot password?</Link>
+                <Link href="/auth/forgot-password" className="text-xs font-medium" style={{ color: "oklch(40% 0.22 290)" }}>Forgot?</Link>
               </div>
               <div className="relative">
                 <input
@@ -136,13 +140,15 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 border border-gray-200 outline-none transition-all bg-white pr-11"
-                  onFocus={e => (e.target.style.borderColor = "#641BC4")}
-                  onBlur={e => (e.target.style.borderColor = "#E5E7EB")}
+                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 border outline-none bg-white pr-11 transition-shadow"
+                  style={{ borderColor: "var(--color-border)" }}
+                  onFocus={e => { e.target.style.borderColor = "oklch(40% 0.22 290)"; e.target.style.boxShadow = "0 0 0 3px oklch(40% 0.22 290 / 0.1)"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--color-border)"; e.target.style.boxShadow = "none"; }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
+                  aria-label={showPass ? "Hide password" : "Show password"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPass ? <IconEyeOff /> : <IconEye />}
@@ -153,23 +159,24 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3.5 rounded-xl font-semibold text-sm text-white transition-opacity disabled:opacity-70"
-              style={{ background: "#641BC4" }}
+              className="w-full py-3.5 rounded-xl font-semibold text-sm text-white disabled:opacity-60 mt-1"
+              style={{ background: "oklch(40% 0.22 290)" }}
             >
-              {isLoading ? "Logging in..." : "Log In"}
+              {isLoading ? "Logging in..." : "Log in"}
             </button>
           </form>
 
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400">or</span>
-            <div className="flex-1 h-px bg-gray-100" />
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px" style={{ background: "var(--color-border)" }} />
+            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>or</span>
+            <div className="flex-1 h-px" style={{ background: "var(--color-border)" }} />
           </div>
 
           <button
-            className="w-full py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+            className="w-full py-3 rounded-xl border text-sm font-medium text-gray-700 flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: "var(--color-border)" }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24">
+            <svg width="17" height="17" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
@@ -178,10 +185,10 @@ export default function LoginPage() {
             Continue with Google
           </button>
 
-          <p className="text-center text-xs text-gray-400 mt-6">
+          <p className="text-center text-xs mt-6" style={{ color: "var(--color-text-muted)" }}>
             By signing in you agree to our{" "}
-            <a href="#" className="underline">Terms</a> and{" "}
-            <a href="#" className="underline">Privacy Policy</a>
+            <a href="#" className="underline underline-offset-2">Terms</a> and{" "}
+            <a href="#" className="underline underline-offset-2">Privacy Policy</a>
           </p>
         </div>
       </div>

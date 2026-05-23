@@ -546,7 +546,7 @@ export default function LandingPage() {
                 <br />
                 lesson notes,
                 <br />
-                <span className="accent-text">generated in seconds.</span>
+                <span style={{ color: "oklch(40% 0.22 290)" }}>generated in seconds.</span>
               </h1>
 
               <p className="text-gray-500 text-lg leading-relaxed mb-8 max-w-lg">

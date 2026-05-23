@@ -11,10 +11,24 @@ import { useGetWalletQuery } from "@/lib/services/walletApi";
 import { CLASS_LEVELS_UI } from "@/lib/constants";
 
 const CLASSES = CLASS_LEVELS_UI;
-
-// API uses "JSS1" format, UI shows "JSS 1"
 const toApiClass = (c: string) => c.replace(" ", "");
 const DURATIONS = [30, 40, 45, 60, 80];
+
+function SectionLabel({ step, label }: { step: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3">
+      <span
+        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+        style={{ background: "var(--color-primary-dim)", color: "oklch(40% 0.22 290)" }}
+      >
+        {step}
+      </span>
+      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
+        {label}
+      </p>
+    </div>
+  );
+}
 
 export default function GeneratePage() {
   const router = useRouter();
@@ -55,7 +69,7 @@ export default function GeneratePage() {
   const statusMessages = [
     `Connecting to ${resolvedState || "state"} curriculum database...`,
     "Fetching scheme of work...",
-    "Structuring your Lesson Plan...",
+    "Structuring your lesson plan...",
   ];
 
   async function handleGenerate() {
@@ -66,10 +80,7 @@ export default function GeneratePage() {
         idx = (idx + 1) % statusMessages.length;
         setStatusIdx(idx);
       }, 1400);
-      const res = await generateLessonPlan({
-        curriculumWeekId: selectedWeekId,
-        durationMinutes: duration,
-      }).unwrap();
+      const res = await generateLessonPlan({ curriculumWeekId: selectedWeekId, durationMinutes: duration }).unwrap();
       clearInterval(interval);
       router.push(`/notes/${res.data.noteId}`);
     } catch {
@@ -77,29 +88,66 @@ export default function GeneratePage() {
     }
   }
 
+  const selectClass = "w-full px-3 py-3 rounded-xl text-sm text-gray-900 border outline-none bg-white appearance-none transition-shadow";
+  const selectStyle = { borderColor: "var(--color-border)" };
+  const onFocus = (e: React.FocusEvent<HTMLSelectElement>) => {
+    e.target.style.borderColor = "oklch(40% 0.22 290)";
+    e.target.style.boxShadow = "0 0 0 3px oklch(40% 0.22 290 / 0.08)";
+  };
+  const onBlur = (e: React.FocusEvent<HTMLSelectElement>) => {
+    e.target.style.borderColor = "var(--color-border)";
+    e.target.style.boxShadow = "none";
+  };
+
+  const ChevronDown = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+
   if (generating) {
     return (
-      <div className="flex flex-col min-h-full px-5 py-6" style={{ background: "#FAFAFA" }}>
-        <div className="mb-8">
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#EDE9FE" }}>
-            <div className="h-full rounded-full animate-pulse" style={{ background: "#641BC4", width: "60%" }} />
+      <div className="flex flex-col min-h-full px-5 py-8" style={{ background: "var(--color-surface)" }}>
+        {/* Progress bar */}
+        <div className="mb-10">
+          <div className="h-0.5 rounded-full overflow-hidden" style={{ background: "var(--color-border)" }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                background: "oklch(40% 0.22 290)",
+                width: "55%",
+                transition: "width 1.4s var(--ease-out)",
+                animation: "genFill 3s ease-out forwards",
+              }}
+            />
           </div>
         </div>
+
         <div className="flex-1 flex flex-col justify-center">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-2xl" style={{ background: "#F5F3FF" }}>
-            ⚡
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6"
+            style={{ background: "var(--color-primary-dim)" }}
+          >
+            <IconBolt className="w-5 h-5" style={{ color: "oklch(40% 0.22 290)" }} />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "#641BC4" }}>Generating</p>
-          <h2 className="font-display font-bold text-gray-900 text-2xl mb-3" style={{ letterSpacing: "-0.02em" }}>
-            Building your Lesson Plan...
+
+          <p className="text-xs font-bold uppercase tracking-[0.12em] mb-2" style={{ color: "oklch(40% 0.22 290)" }}>
+            Generating
+          </p>
+          <h2 className="font-display font-bold text-gray-900 text-2xl mb-2" style={{ letterSpacing: "-0.02em" }}>
+            Building your lesson plan
           </h2>
-          <p className="text-gray-500 text-sm mb-8">{statusMessages[statusIdx]}</p>
-          <div className="space-y-3">
-            <div className="animate-shimmer h-4 w-3/4 rounded-lg" />
+          <p className="text-sm mb-8" style={{ color: "var(--color-text-muted)" }}>
+            {statusMessages[statusIdx]}
+          </p>
+
+          {/* Skeleton lines */}
+          <div className="space-y-2.5">
+            <div className="animate-shimmer h-3.5 w-3/4 rounded-lg" />
             <div className="animate-shimmer h-3 w-full rounded-lg" />
             <div className="animate-shimmer h-3 w-5/6 rounded-lg" />
             <div className="animate-shimmer h-3 w-4/6 rounded-lg" />
-            <div className="mt-4 animate-shimmer h-4 w-1/2 rounded-lg" />
+            <div className="mt-5 animate-shimmer h-3.5 w-1/2 rounded-lg" />
             <div className="animate-shimmer h-3 w-full rounded-lg" />
             <div className="animate-shimmer h-3 w-3/4 rounded-lg" />
           </div>
@@ -109,115 +157,96 @@ export default function GeneratePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-full" style={{ background: "#FAFAFA" }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-5 pb-3">
-        <Link href="/dashboard" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 text-gray-500">
+    <div className="flex flex-col min-h-full" style={{ background: "var(--color-surface)" }}>
+
+      {/* ── Header ── */}
+      <div className="flex items-center gap-3 px-4 pt-5 pb-2">
+        <Link
+          href="/dashboard"
+          aria-label="Back to dashboard"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-white hover:text-gray-700 transition-colors"
+        >
           <IconBack />
         </Link>
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">New Lesson</p>
-          <h2 className="font-display font-bold text-gray-900 text-xl" style={{ letterSpacing: "-0.02em" }}>Configure your note</h2>
+          <h1 className="font-display font-bold text-gray-900 text-xl" style={{ letterSpacing: "-0.02em" }}>
+            New lesson note
+          </h1>
         </div>
       </div>
 
-      <div className="px-5 pb-2">
-        <p className="text-sm text-gray-400">Curriculum · {resolvedState || "Select your state below"}</p>
-      </div>
-
-      {/* Balance bar */}
-      <div className="mx-5 mb-5 px-4 py-3 rounded-xl flex items-center gap-2" style={{ background: "#F5F3FF", border: "1px solid #EDE9FE" }}>
-        <span className="text-base">🗂</span>
-        <p className="text-sm font-medium" style={{ color: "#641BC4" }}>
-          ₽{balance} · this generation costs ₽{planCost} (plan)
+      {/* Balance strip */}
+      <div className="mx-5 mb-5 mt-2 px-4 py-2.5 rounded-xl flex items-center justify-between" style={{ background: "white", border: "1px solid var(--color-border)" }}>
+        <p className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+          Balance: <span className="font-bold text-gray-900">₽{balance}</span>
+        </p>
+        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          This plan costs <span className="font-semibold text-gray-900">₽{planCost}</span>
         </p>
       </div>
 
-      <div className="px-5 space-y-5 flex-1 pb-36">
-        {/* State */}
+      <div className="px-5 space-y-6 flex-1 pb-36">
+
+        {/* Step 1: State */}
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">State Curriculum</p>
+          <SectionLabel step="1" label="Curriculum" />
           <div className="relative">
-            <select
-              value={resolvedState}
-              onChange={e => { setState(e.target.value); setSubject(""); setSelectedWeekId(null); }}
-              className="w-full px-3 py-3 rounded-xl text-sm text-gray-900 border border-gray-200 outline-none bg-white appearance-none"
-              onFocus={e => (e.target.style.borderColor = "#641BC4")}
-              onBlur={e => (e.target.style.borderColor = "#E5E7EB")}
-            >
+            <select value={resolvedState} onChange={e => { setState(e.target.value); setSubject(""); setSelectedWeekId(null); }}
+              className={selectClass} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
               <option value="">Select state...</option>
-              {(statesData?.data?.states ?? []).map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {(statesData?.data?.states ?? []).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
-            </div>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown /></div>
           </div>
           {profileState && !state && (
-            <p className="text-xs mt-1" style={{ color: "#641BC4" }}>Using {profileState} from your profile</p>
+            <p className="text-xs mt-1.5 font-medium" style={{ color: "oklch(40% 0.22 290)" }}>
+              Using {profileState} from your profile
+            </p>
           )}
         </div>
 
-        {/* Class & Subject */}
+        {/* Step 2: Class & Subject */}
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Class &amp; Subject</p>
+          <SectionLabel step="2" label="Class &amp; subject" />
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Class</label>
-              <div className="relative">
-                <select
-                  value={classLevel}
-                  onChange={e => { setClassLevel(e.target.value); setSubject(""); setSelectedWeekId(null); }}
-                  className="w-full px-3 py-3 rounded-xl text-sm text-gray-900 border border-gray-200 outline-none bg-white appearance-none"
-                  onFocus={e => (e.target.style.borderColor = "#641BC4")}
-                  onBlur={e => (e.target.style.borderColor = "#E5E7EB")}
-                >
-                  <option value="">Select...</option>
-                  {CLASSES.map(c => <option key={c}>{c}</option>)}
-                </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
-                </div>
-              </div>
+            <div className="relative">
+              <select value={classLevel} onChange={e => { setClassLevel(e.target.value); setSubject(""); setSelectedWeekId(null); }}
+                className={selectClass} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+                <option value="">Class...</option>
+                {CLASSES.map(c => <option key={c}>{c}</option>)}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown /></div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
-              <div className="relative">
-                <select
-                  value={subject}
-                  onChange={e => { setSubject(e.target.value); setSelectedWeekId(null); }}
-                  disabled={!classLevel || !resolvedState || loadingSubjects || subjects.length === 0}
-                  className="w-full px-3 py-3 rounded-xl text-sm text-gray-900 border border-gray-200 outline-none bg-white appearance-none disabled:opacity-50"
-                  onFocus={e => (e.target.style.borderColor = "#641BC4")}
-                  onBlur={e => (e.target.style.borderColor = "#E5E7EB")}
-                >
-                  <option value="">
-                    {loadingSubjects ? "Loading…" : !resolvedState ? "Select state first" : !classLevel ? "Select class first" : subjects.length === 0 ? "No subjects found" : "Select…"}
-                  </option>
-                  {subjects.map(s => <option key={s}>{s}</option>)}
-                </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
-                </div>
-              </div>
+            <div className="relative">
+              <select
+                value={subject}
+                onChange={e => { setSubject(e.target.value); setSelectedWeekId(null); }}
+                disabled={!classLevel || !resolvedState || loadingSubjects || subjects.length === 0}
+                className={`${selectClass} disabled:opacity-50`}
+                style={selectStyle} onFocus={onFocus} onBlur={onBlur}
+              >
+                <option value="">
+                  {loadingSubjects ? "Loading..." : !resolvedState ? "State first" : !classLevel ? "Class first" : subjects.length === 0 ? "None found" : "Subject..."}
+                </option>
+                {subjects.map(s => <option key={s}>{s}</option>)}
+              </select>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown /></div>
             </div>
           </div>
         </div>
 
-        {/* Term */}
+        {/* Step 3: Term */}
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Term</p>
-          <div className="grid grid-cols-3 gap-2 p-1 rounded-xl" style={{ background: "#F3F4F6" }}>
+          <SectionLabel step="3" label="Term" />
+          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl" style={{ background: "var(--color-border)" }}>
             {[1, 2, 3].map(t => (
               <button
                 key={t}
                 onClick={() => { setTerm(t); setSelectedWeekId(null); }}
-                className="py-2.5 rounded-lg text-sm font-medium transition-all"
-                style={
-                  term === t
-                    ? { background: "white", color: "#641BC4", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }
-                    : { color: "#6B7280" }
+                className="py-2.5 rounded-lg text-sm font-semibold transition-all"
+                style={term === t
+                  ? { background: "white", color: "oklch(40% 0.22 290)", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
+                  : { color: "var(--color-text-muted)" }
                 }
               >
                 Term {t}
@@ -226,44 +255,43 @@ export default function GeneratePage() {
           </div>
         </div>
 
-        {/* Week & Topic */}
+        {/* Step 4: Week & Topic */}
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Week &amp; Topic</p>
+          <SectionLabel step="4" label="Week &amp; topic" />
           {!subject || !classLevel ? (
-            <div className="rounded-xl p-4 text-sm text-gray-400 text-center" style={{ background: "white", border: "1px solid #E5E7EB" }}>
+            <div className="rounded-xl px-4 py-4 text-sm text-center" style={{ background: "white", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
               Select class and subject to see topics
             </div>
           ) : weeks.length === 0 ? (
-            <div className="rounded-xl p-4 text-sm text-gray-400 text-center" style={{ background: "white", border: "1px solid #E5E7EB" }}>
+            <div className="rounded-xl px-4 py-4 text-sm text-center" style={{ background: "white", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
               Loading curriculum...
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {weeks.map(w => (
                 <button
                   key={w.curriculumWeekId}
                   onClick={() => setSelectedWeekId(w.curriculumWeekId)}
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all"
-                  style={
-                    selectedWeekId === w.curriculumWeekId
-                      ? { background: "#641BC4", border: "1px solid #641BC4" }
-                      : { background: "white", border: "1px solid #E5E7EB" }
+                  style={selectedWeekId === w.curriculumWeekId
+                    ? { background: "oklch(40% 0.22 290)", border: "1.5px solid oklch(40% 0.22 290)" }
+                    : { background: "white", border: "1px solid var(--color-border)" }
                   }
                 >
                   <span
-                    className="text-xs font-mono font-semibold w-6 shrink-0"
-                    style={{ color: selectedWeekId === w.curriculumWeekId ? "rgba(255,255,255,0.6)" : "#9CA3AF" }}
+                    className="text-xs font-mono font-bold w-6 shrink-0 tabular-nums"
+                    style={{ color: selectedWeekId === w.curriculumWeekId ? "rgba(255,255,255,0.5)" : "var(--color-text-muted)" }}
                   >
                     {String(w.week).padStart(2, "0")}
                   </span>
                   <span
-                    className="text-sm font-medium flex-1"
+                    className="text-sm font-medium flex-1 leading-snug"
                     style={{ color: selectedWeekId === w.curriculumWeekId ? "white" : "#374151" }}
                   >
                     {w.topic}
                   </span>
                   {selectedWeekId === w.curriculumWeekId && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
                   )}
                 </button>
               ))}
@@ -271,19 +299,18 @@ export default function GeneratePage() {
           )}
         </div>
 
-        {/* Duration */}
+        {/* Step 5: Duration */}
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Duration</p>
+          <SectionLabel step="5" label="Duration" />
           <div className="flex gap-2 flex-wrap">
             {DURATIONS.map(d => (
               <button
                 key={d}
                 onClick={() => setDuration(d)}
-                className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-                style={
-                  duration === d
-                    ? { background: "#641BC4", color: "white" }
-                    : { background: "white", border: "1px solid #E5E7EB", color: "#374151" }
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                style={duration === d
+                  ? { background: "oklch(40% 0.22 290)", color: "white" }
+                  : { background: "white", border: "1px solid var(--color-border)", color: "#374151" }
                 }
               >
                 {d} min
@@ -293,29 +320,27 @@ export default function GeneratePage() {
         </div>
       </div>
 
-      {/* Sticky generate CTA */}
+      {/* ── Sticky CTA — mobile ── */}
       <div
         className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-107.5 px-5 py-4 lg:hidden"
-        style={{ background: "white", borderTop: "1px solid #E5E7EB" }}
+        style={{ background: "oklch(98.5% 0.002 290)", borderTop: "1px solid var(--color-border)" }}
       >
-        <GenerateCTA canGenerate={canGenerate} selectedWeekId={selectedWeekId} onGenerate={handleGenerate} />
+        <GenerateCTA canGenerate={canGenerate} selectedWeekId={selectedWeekId} balance={balance} planCost={planCost} onGenerate={handleGenerate} />
       </div>
 
-      {/* Desktop CTA */}
+      {/* ── Desktop CTA ── */}
       <div className="hidden lg:block px-5 pb-8">
-        <GenerateCTA canGenerate={canGenerate} selectedWeekId={selectedWeekId} onGenerate={handleGenerate} />
+        <GenerateCTA canGenerate={canGenerate} selectedWeekId={selectedWeekId} balance={balance} planCost={planCost} onGenerate={handleGenerate} />
       </div>
     </div>
   );
 }
 
-function GenerateCTA({
-  canGenerate,
-  selectedWeekId,
-  onGenerate,
-}: {
+function GenerateCTA({ canGenerate, selectedWeekId, balance: _balance, planCost, onGenerate }: {
   canGenerate: boolean;
   selectedWeekId: string | null;
+  balance: string;
+  planCost: number;
   onGenerate: () => void;
 }) {
   return (
@@ -323,24 +348,24 @@ function GenerateCTA({
       <button
         onClick={onGenerate}
         disabled={!selectedWeekId || !canGenerate}
-        className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity disabled:opacity-40"
-        style={{ background: "#641BC4" }}
+        className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-40"
+        style={{ background: "oklch(40% 0.22 290)" }}
       >
-        <IconBolt className="w-5 h-5" />
-        Generate Lesson Plan
-        <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(255,255,255,0.2)" }}>
-          ₽8
+        <IconBolt className="w-4.5 h-4.5" />
+        Generate lesson plan
+        <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(255,255,255,0.18)" }}>
+          ₽{planCost}
         </span>
       </button>
       {!canGenerate && (
-        <p className="text-xs text-center mt-2" style={{ color: "#EF4444" }}>
-          ⚠ Insufficient balance.{" "}
-          <Link href="/wallet" style={{ color: "#641BC4" }}>Top Up Wallet →</Link>
+        <p className="text-xs text-center mt-2 text-red-500">
+          Insufficient balance.{" "}
+          <Link href="/wallet" className="font-semibold" style={{ color: "oklch(40% 0.22 290)" }}>Top up →</Link>
         </p>
       )}
-      {canGenerate && (
-        <p className="text-xs text-center mt-2 text-gray-400">
-          Plan ₽8 + Note ₽12 = ₽20 total · Plan first, refine, then Note
+      {canGenerate && selectedWeekId && (
+        <p className="text-xs text-center mt-2" style={{ color: "var(--color-text-muted)" }}>
+          Plan ₽8 + Note ₽12 = ₽20 total
         </p>
       )}
     </>

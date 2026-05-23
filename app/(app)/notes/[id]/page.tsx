@@ -192,7 +192,7 @@ function EditableList({
       <button
         onClick={() => onChange([...items, ""])}
         className="text-xs font-medium mt-1 flex items-center gap-1"
-        style={{ color: "#641BC4" }}
+        style={{ color: "oklch(40% 0.22 290)" }}
       >
         <span className="text-base leading-none">+</span> Add item
       </button>
@@ -217,7 +217,7 @@ function DocSection({
     <div className="mb-0">
       <div
         className="flex items-center gap-2 py-3 cursor-default select-none"
-        style={{ borderTop: "1px solid #F3F4F6" }}
+        style={{ borderTop: "1px solid var(--color-border)" }}
       >
         <span className="text-[10px] font-mono font-bold tracking-widest text-gray-300">{num}</span>
         <h3
@@ -238,7 +238,7 @@ function MetaRow({ plan }: { plan: { metadata: LessonPlan["metadata"] } | null }
   if (!plan) return null;
   const m = plan.metadata;
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-6 pb-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-6 pb-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
       <span><strong className="text-gray-600">Subject</strong> {m.subject}</span>
       <span><strong className="text-gray-600">Class</strong> {m.classLevel}</span>
       <span><strong className="text-gray-600">Term</strong> {m.term}</span>
@@ -305,9 +305,9 @@ function PlanCanvas({ plan, onChange }: { plan: LessonPlan; onChange: (p: Lesson
       <DocSection num="06" title="Presentation">
         <div className="space-y-4">
           {(plan.presentation || []).map((step, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "#FAFAFA", border: "1px solid #F3F4F6" }}>
+            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#641BC4" }}>
+                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(40% 0.22 290)" }}>
                   Step {step.step}: {step.title}
                 </span>
                 <Rich
@@ -385,7 +385,7 @@ function PlanCanvas({ plan, onChange }: { plan: LessonPlan; onChange: (p: Lesson
 function NoteMetaRow({ note }: { note: LessonNote }) {
   const m = note.header;
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-6 pb-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-6 pb-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
       <span><strong className="text-gray-600">Subject</strong> {m?.subject}</span>
       <span><strong className="text-gray-600">Class</strong> {m?.classLevel}</span>
       <span><strong className="text-gray-600">Term</strong> {m?.term}</span>
@@ -406,9 +406,9 @@ function NoteCanvas({ note, onChange }: { note: LessonNote; onChange: (n: Lesson
       <DocSection num="01" title="Presentation">
         <div className="space-y-5">
           {(note.presentation || []).map((step, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "#FAFAFA", border: "1px solid #F3F4F6" }}>
+            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#641BC4" }}>
+                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(40% 0.22 290)" }}>
                   Step {step.step}: {step.title}
                 </span>
                 <Rich
@@ -443,8 +443,8 @@ function NoteCanvas({ note, onChange }: { note: LessonNote; onChange: (n: Lesson
       <DocSection num="02" title="Subject Content">
         <div className="space-y-5">
           {(note.subjectContent || []).map((section, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "#FAFAFA", border: "1px solid #F3F4F6" }}>
-              <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: "#641BC4" }}>
+            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: "oklch(40% 0.22 290)" }}>
                 {section.subTopic}
               </p>
 
@@ -479,10 +479,10 @@ function NoteCanvas({ note, onChange }: { note: LessonNote; onChange: (n: Lesson
                 {(section.keyPoints || []).length > 0 && (
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Key Points</p>
-                    <div className="rounded-lg px-3 py-2 space-y-1" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                    <div className="rounded-lg px-3 py-2 space-y-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
                       {section.keyPoints.map((line, k) => (
                         <p key={k} className="text-xs text-gray-700 flex items-start gap-2">
-                          <span style={{ color: "#641BC4" }} className="font-bold shrink-0">→</span>
+                          <span style={{ color: "oklch(40% 0.22 290)" }} className="font-bold shrink-0">→</span>
                           {line}
                         </p>
                       ))}
@@ -496,10 +496,10 @@ function NoteCanvas({ note, onChange }: { note: LessonNote; onChange: (n: Lesson
       </DocSection>
 
       <DocSection num="03" title="Board Summary">
-        <div className="rounded-lg px-4 py-3 space-y-2" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+        <div className="rounded-lg px-4 py-3 space-y-2" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
           {(note.boardSummary || []).map((line, i) => (
             <div key={i} className="text-sm text-gray-800 flex items-start gap-2">
-               <span className="mt-[2px]" style={{ color: "#641BC4" }}>•</span>
+               <span className="mt-[2px]" style={{ color: "oklch(40% 0.22 290)" }}>•</span>
                <Rich
                  value={line}
                  onChange={v => {
@@ -518,7 +518,7 @@ function NoteCanvas({ note, onChange }: { note: LessonNote; onChange: (n: Lesson
       <DocSection num="04" title="Evaluation">
         <div className="space-y-3">
           {(note.evaluation || []).map((qa, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "#FAFAFA", border: "1px solid #F3F4F6" }}>
+            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Q{i + 1}</p>
               <Rich
                 value={qa.question || ""}
@@ -689,7 +689,7 @@ export default function CanvasPage() {
       {/* Top bar */}
       <div
         className="flex items-center gap-2 px-4 py-3 shrink-0 sticky top-0 z-10 bg-white"
-        style={{ borderBottom: "1px solid #F3F4F6" }}
+        style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <Link href="/notes" className="w-8 h-8 flex items-center justify-center text-gray-400 rounded-lg hover:bg-gray-100 shrink-0">
           <IconBack />
@@ -719,7 +719,7 @@ export default function CanvasPage() {
               className="px-3 py-1 rounded-md text-xs font-semibold transition-all disabled:opacity-30 capitalize"
               style={
                 phase === p
-                  ? { background: "white", color: "#641BC4", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
+                  ? { background: "white", color: "oklch(40% 0.22 290)", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
                   : { color: "#6B7280" }
               }
             >
@@ -739,21 +739,23 @@ export default function CanvasPage() {
           {showMenu && (
             <div
               className="absolute top-full right-0 mt-1 w-52 rounded-xl shadow-xl overflow-hidden"
-              style={{ background: "white", border: "1px solid #E5E7EB", zIndex: 50 }}
+              style={{ background: "white", border: "1px solid var(--color-border)", zIndex: 50 }}
             >
               <button
                 onClick={() => { setShowRegenerate(true); setShowMenu(false); }}
                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left"
               >
-                <span>✨</span> Regenerate {phase === "plan" ? "Plan" : "Note"} · ₽5
+                <IconBolt className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(40% 0.22 290)" }} />
+                Regenerate {phase === "plan" ? "Plan" : "Note"} · ₽5
               </button>
               {hasNote && (
                 <button
                   onClick={() => { setShowExport(true); setShowMenu(false); }}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left"
-                  style={{ borderTop: "1px solid #F3F4F6" }}
+                  style={{ borderTop: "1px solid var(--color-border)" }}
                 >
-                  <span>⬇️</span> Export Material
+                  <IconDownload className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                  Export Material
                 </button>
               )}
             </div>
@@ -764,9 +766,9 @@ export default function CanvasPage() {
       {/* Meta tags */}
       <div
         className="px-5 py-2 flex items-center gap-2 flex-wrap shrink-0 scrollbar-hidden overflow-x-auto"
-        style={{ borderBottom: "1px solid #F9FAFB" }}
+        style={{ borderBottom: "1px solid var(--color-border)" }}
       >
-        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap" style={{ background: "#F5F3FF", color: "#641BC4" }}>
+        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap" style={{ background: "var(--color-primary-dim)", color: "oklch(40% 0.22 290)" }}>
           {note.subjectName}
         </span>
         <span className="text-xs text-gray-400 whitespace-nowrap">{note.classLevel}</span>
@@ -778,15 +780,16 @@ export default function CanvasPage() {
 
       {/* Regenerate panel */}
       {showRegenerate && (
-        <div className="px-5 py-4 shrink-0" style={{ borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
+        <div className="px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <p className="text-xs font-semibold text-gray-700 mb-2">
-            ✨ Regenerate {phase === "plan" ? "Lesson Plan" : "Lesson Note"} <span className="text-gray-400 font-normal">· costs ₽5</span>
+            Regenerate {phase === "plan" ? "Lesson Plan" : "Lesson Note"} <span className="font-normal" style={{ color: "var(--color-text-muted)" }}>· costs ₽5</span>
           </p>
           <textarea
             value={regenInstructions}
             onChange={e => setRegenInstructions(e.target.value)}
-            placeholder={'Optional: add instructions for the AI (e.g. "make it simpler", "add more examples")…'}
-            className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 outline-none resize-none bg-white leading-relaxed"
+            placeholder={'Optional: add instructions (e.g. "make it simpler", "add more examples")'}
+            className="w-full text-sm px-3 py-2.5 rounded-xl outline-none resize-none bg-white leading-relaxed"
+            style={{ border: "1px solid var(--color-border)" }}
             rows={2}
           />
           <div className="flex gap-2 mt-2">
@@ -794,13 +797,14 @@ export default function CanvasPage() {
               onClick={handleRegenerate}
               disabled={regenerating}
               className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
-              style={{ background: "#641BC4" }}
+              style={{ background: "oklch(40% 0.22 290)" }}
             >
               {regenerating ? "Regenerating…" : "Regenerate ₽5"}
             </button>
             <button
               onClick={() => { setShowRegenerate(false); setRegenInstructions(""); }}
-              className="px-4 py-2.5 rounded-xl text-xs font-medium text-gray-500 border border-gray-200 hover:bg-gray-50"
+              className="px-4 py-2.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              style={{ border: "1px solid var(--color-border)" }}
             >
               Cancel
             </button>
@@ -841,7 +845,7 @@ export default function CanvasPage() {
         {phase === "note" && !generatingNote && !lessonNote && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <p className="text-gray-400 text-sm mb-3">Generate the Lesson Note from the Plan.</p>
-            <button onClick={() => setPhase("plan")} className="text-sm font-medium" style={{ color: "#641BC4" }}>
+            <button onClick={() => setPhase("plan")} className="text-sm font-medium" style={{ color: "oklch(40% 0.22 290)" }}>
               ← Back to Plan
             </button>
           </div>
@@ -862,21 +866,26 @@ export default function CanvasPage() {
             style={{ background: "white" }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+            <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
               <p className="font-semibold text-gray-900">Export Material</p>
               <p className="text-xs text-gray-400 mt-0.5">Download your lesson material</p>
             </div>
             {[
-              { icon: "📄", label: "Download as PDF", sub: "Best for printing", fmt: "pdf" as const },
-              { icon: "📝", label: "Download as DOCX", sub: "Editable Word document", fmt: "docx" as const },
+              { label: "Download as PDF", sub: "Best for printing", fmt: "pdf" as const },
+              { label: "Download as DOCX", sub: "Editable Word document", fmt: "docx" as const },
             ].map((opt, i) => (
               <button
                 key={i}
                 onClick={() => handleExport(opt.fmt)}
                 className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-                style={{ borderTop: i > 0 ? "1px solid #F3F4F6" : undefined }}
+                style={{ borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}
               >
-                <span className="text-2xl">{opt.icon}</span>
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "var(--color-primary-dim)" }}
+                >
+                  <IconDownload className="w-4 h-4" style={{ color: "oklch(40% 0.22 290)" }} />
+                </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
                   <p className="text-xs text-gray-400">{opt.sub}</p>
@@ -891,7 +900,7 @@ export default function CanvasPage() {
       {/* Sticky bottom action bar */}
       <div
         className="shrink-0 px-5 py-3 bg-white"
-        style={{ borderTop: "1px solid #F3F4F6" }}
+        style={{ borderTop: "1px solid var(--color-border)" }}
       >
         {phase === "plan" && !hasNote && !generatingNote && (
           canGenerateNote ? (
@@ -899,7 +908,7 @@ export default function CanvasPage() {
               onClick={handleGenerateNote}
               disabled={!plan}
               className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-40 transition"
-              style={{ background: "linear-gradient(135deg,#7C3AED,#641BC4)" }}
+              style={{ background: "oklch(40% 0.22 290)" }}
             >
               <IconBolt className="w-5 h-5" />
               Generate Full Lesson Note
@@ -909,8 +918,8 @@ export default function CanvasPage() {
             </button>
           ) : (
             <div className="text-center py-1">
-              <p className="text-sm text-red-500 mb-1.5">⚠ Insufficient balance to generate Note.</p>
-              <Link href="/wallet" className="text-sm font-semibold" style={{ color: "#641BC4" }}>
+              <p className="text-sm text-red-500 mb-1.5">Insufficient balance to generate Note.</p>
+              <Link href="/wallet" className="text-sm font-semibold" style={{ color: "oklch(40% 0.22 290)" }}>
                 Top Up Wallet →
               </Link>
             </div>
@@ -921,14 +930,14 @@ export default function CanvasPage() {
           <button
             onClick={() => setPhase("note")}
             className="w-full py-4 rounded-2xl font-semibold text-white transition"
-            style={{ background: "linear-gradient(135deg,#7C3AED,#641BC4)" }}
+            style={{ background: "oklch(40% 0.22 290)" }}
           >
             View Lesson Note →
           </button>
         )}
 
         {generatingNote && (
-          <button disabled className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 opacity-70" style={{ background: "#641BC4" }}>
+          <button disabled className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 opacity-70" style={{ background: "oklch(40% 0.22 290)" }}>
             <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <circle cx="12" cy="12" r="10" opacity="0.2" />
               <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
@@ -941,7 +950,7 @@ export default function CanvasPage() {
           <button
             onClick={() => setShowExport(true)}
             className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition"
-            style={{ background: "linear-gradient(135deg,#7C3AED,#641BC4)" }}
+            style={{ background: "oklch(40% 0.22 290)" }}
           >
             <IconDownload className="w-5 h-5" />
             Export Material

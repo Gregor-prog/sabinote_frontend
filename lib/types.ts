@@ -158,16 +158,21 @@ export interface Notification {
 // ── Curriculum ──
 
 export interface CurriculumWeek {
-  curriculumWeekId: string
+  id: string
   week: number
   topic: string
+  source: 'state' | 'general'
 }
 
-export interface CurriculumWeekDetail extends CurriculumWeek {
+export interface CurriculumWeekDetail {
+  id: string
+  source: 'state' | 'general'
   state: string
   subject: string
   classLevel: string
   term: number
+  week: number
+  topic: string
   subTopics: string[]
   objectives: string[]
   teachingActivities?: string

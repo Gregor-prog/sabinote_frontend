@@ -13,7 +13,12 @@ export const generateApi = baseApi.injectEndpoints({
           parratsCost: number
         }
       },
-      { curriculumWeekId: string; durationMinutes: number; resourceId?: string }
+      {
+        durationMinutes: number
+        resourceId?: string
+        curriculumWeekId?: string
+        generalCurriculumId?: string
+      }
     >({
       query: (body) => ({ url: '/generate/lesson-plan', method: 'POST', body }),
       invalidatesTags: ['Notes', 'Wallet', 'Transactions'],

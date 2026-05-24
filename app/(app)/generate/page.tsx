@@ -39,7 +39,8 @@ export default function GeneratePage() {
   const [subject, setSubject] = useState("");
   const [classLevel, setClassLevel] = useState("");
   const [term, setTerm] = useState(1);
-  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<{ id: string; source: 'state' | 'general' } | null>(null);
+  const selectedWeekId = selectedWeek?.id ?? null;
   const [duration, setDuration] = useState(40);
   const [statusIdx, setStatusIdx] = useState(0);
 
@@ -73,14 +74,20 @@ export default function GeneratePage() {
   ];
 
   async function handleGenerate() {
-    if (!selectedWeekId) return;
+    if (!selectedWeek) return;
     try {
       let idx = 0;
       const interval = setInterval(() => {
         idx = (idx + 1) % statusMessages.length;
         setStatusIdx(idx);
       }, 1400);
-      const res = await generateLessonPlan({ curriculumWeekId: selectedWeekId, durationMinutes: duration }).unwrap();
+      const payload = {
+        durationMinutes: duration,
+        ...(selectedWeek.source === 'state'
+          ? { curriculumWeekId: selectedWeek.id }
+          : { generalCurriculumId: selectedWeek.id }),
+      };
+      const res = await generateLessonPlan(payload).unwrap();
       clearInterval(interval);
       router.push(`/notes/${res.data.noteId}`);
     } catch {
@@ -191,7 +198,7 @@ export default function GeneratePage() {
         <div>
           <SectionLabel step="1" label="Curriculum" />
           <div className="relative">
-            <select value={resolvedState} onChange={e => { setState(e.target.value); setSubject(""); setSelectedWeekId(null); }}
+            <select value={resolvedState} onChange={e => { setState(e.target.value); setSubject(""); setSelectedWeek(null); }}
               className={selectClass} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
               <option value="">Select state...</option>
               {(statesData?.data?.states ?? []).map(s => <option key={s} value={s}>{s}</option>)}
@@ -210,7 +217,7 @@ export default function GeneratePage() {
           <SectionLabel step="2" label="Class &amp; subject" />
           <div className="grid grid-cols-2 gap-3">
             <div className="relative">
-              <select value={classLevel} onChange={e => { setClassLevel(e.target.value); setSubject(""); setSelectedWeekId(null); }}
+              <select value={classLevel} onChange={e => { setClassLevel(e.target.value); setSubject(""); setSelectedWeek(null); }}
                 className={selectClass} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
                 <option value="">Class...</option>
                 {CLASSES.map(c => <option key={c}>{c}</option>)}
@@ -220,7 +227,7 @@ export default function GeneratePage() {
             <div className="relative">
               <select
                 value={subject}
-                onChange={e => { setSubject(e.target.value); setSelectedWeekId(null); }}
+                onChange={e => { setSubject(e.target.value); setSelectedWeek(null); }}
                 disabled={!classLevel || !resolvedState || loadingSubjects || subjects.length === 0}
                 className={`${selectClass} disabled:opacity-50`}
                 style={selectStyle} onFocus={onFocus} onBlur={onBlur}
@@ -242,7 +249,7 @@ export default function GeneratePage() {
             {[1, 2, 3].map(t => (
               <button
                 key={t}
-                onClick={() => { setTerm(t); setSelectedWeekId(null); }}
+                onClick={() => { setTerm(t); setSelectedWeek(null); }}
                 className="py-2.5 rounded-lg text-sm font-semibold transition-all"
                 style={term === t
                   ? { background: "white", color: "oklch(40% 0.22 290)", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
@@ -268,33 +275,53 @@ export default function GeneratePage() {
             </div>
           ) : (
             <div className="space-y-1.5">
-              {weeks.map(w => (
-                <button
-                  key={w.curriculumWeekId}
-                  onClick={() => setSelectedWeekId(w.curriculumWeekId)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all"
-                  style={selectedWeekId === w.curriculumWeekId
-                    ? { background: "oklch(40% 0.22 290)", border: "1.5px solid oklch(40% 0.22 290)" }
-                    : { background: "white", border: "1px solid var(--color-border)" }
-                  }
-                >
-                  <span
-                    className="text-xs font-mono font-bold w-6 shrink-0 tabular-nums"
-                    style={{ color: selectedWeekId === w.curriculumWeekId ? "rgba(255,255,255,0.5)" : "var(--color-text-muted)" }}
+              {weeks.map(w => {
+                const isSelected = selectedWeekId === w.id;
+                const isNational = w.source === 'general';
+                return (
+                  <button
+                    key={w.id}
+                    onClick={() => setSelectedWeek({ id: w.id, source: w.source })}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all"
+                    style={isSelected
+                      ? { background: "oklch(40% 0.22 290)", border: "1.5px solid oklch(40% 0.22 290)" }
+                      : { background: "white", border: "1px solid var(--color-border)" }
+                    }
                   >
-                    {String(w.week).padStart(2, "0")}
-                  </span>
-                  <span
-                    className="text-sm font-medium flex-1 leading-snug"
-                    style={{ color: selectedWeekId === w.curriculumWeekId ? "white" : "#374151" }}
-                  >
-                    {w.topic}
-                  </span>
-                  {selectedWeekId === w.curriculumWeekId && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                  )}
-                </button>
-              ))}
+                    <span
+                      className="text-xs font-mono font-bold w-6 shrink-0 tabular-nums"
+                      style={{ color: isSelected ? "rgba(255,255,255,0.5)" : "var(--color-text-muted)" }}
+                    >
+                      {String(w.week).padStart(2, "0")}
+                    </span>
+                    <span
+                      className="text-sm font-medium flex-1 leading-snug"
+                      style={{ color: isSelected ? "white" : "#374151" }}
+                    >
+                      {w.topic}
+                    </span>
+                    {isNational && !isSelected && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+                        style={{ background: "var(--color-primary-dim)", color: "oklch(40% 0.22 290)" }}
+                      >
+                        National
+                      </span>
+                    )}
+                    {isNational && isSelected && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+                        style={{ background: "rgba(255,255,255,0.2)", color: "white" }}
+                      >
+                        National
+                      </span>
+                    )}
+                    {isSelected && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

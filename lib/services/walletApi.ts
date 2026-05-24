@@ -1,29 +1,35 @@
-import { baseApi } from './baseApi'
-import type { Wallet, Transaction, Pagination } from '../types'
+import { baseApi } from "./baseApi";
+import type { Wallet, Transaction, Pagination } from "../types";
 
 export interface WalletPackage {
-  id: string
-  parats: number
-  priceNGN: number
+  id: string;
+  parats: number;
+  priceNGN: number;
 }
 
 export const walletApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getPackages: build.query<{ success: boolean; data: { packages: WalletPackage[] } }, void>({
-      query: () => '/wallet/packages',
+    getPackages: build.query<
+      { success: boolean; data: { packages: WalletPackage[] } },
+      void
+    >({
+      query: () => "/wallet/packages",
     }),
 
     getWallet: build.query<{ success: boolean; data: Wallet }, void>({
-      query: () => '/wallet',
-      providesTags: ['Wallet'],
+      query: () => "/wallet",
+      providesTags: ["Wallet"],
     }),
 
     getTransactions: build.query<
-      { success: boolean; data: { transactions: Transaction[]; pagination: Pagination } },
+      {
+        success: boolean;
+        data: { transactions: Transaction[]; pagination: Pagination };
+      },
       { page?: number; limit?: number }
     >({
-      query: (params) => ({ url: '/wallet/transactions', params }),
-      providesTags: ['Transactions'],
+      query: (params) => ({ url: "/wallet/transactions", params }),
+      providesTags: ["Transactions"],
     }),
 
     // TODO: TEMPORARY - Manual topup endpoint for testing without Paystack
@@ -32,8 +38,8 @@ export const walletApi = baseApi.injectEndpoints({
       { success: boolean; data: { credited: boolean; message: string } },
       { packageId: string }
     >({
-      query: (body) => ({ url: '/wallet/topup/manual', method: 'POST', body }),
-      invalidatesTags: ['Wallet', 'Transactions'],
+      query: (body) => ({ url: "/wallet/topup/manual", method: "POST", body }),
+      invalidatesTags: ["Wallet", "Transactions"],
     }),
 
     // TODO: TEMPORARY - Paystack flow commented out
@@ -62,7 +68,7 @@ export const walletApi = baseApi.injectEndpoints({
     // }),
   }),
   overrideExisting: false,
-})
+});
 
 export const {
   useGetPackagesQuery,
@@ -72,4 +78,4 @@ export const {
   // TODO: TEMPORARY - Use these when switching back to Paystack
   // useInitiateTopupMutation,
   // useVerifyTopupMutation,
-} = walletApi
+} = walletApi;

@@ -11,7 +11,9 @@ import { useGetWalletQuery } from "@/lib/services/walletApi";
 import { CLASS_LEVELS_UI } from "@/lib/constants";
 
 const CLASSES = CLASS_LEVELS_UI;
-const toApiClass = (c: string) => c.replace(" ", "");
+// General curriculum is seeded with "SS1/SS2/SS3" (2 S's); state curriculum
+// may use "SSS1/SSS2/SSS3". Normalise to 2-S form so both sources match.
+const toApiClass = (c: string) => c.replace(" ", "").replace(/^SSS/, "SS");
 const DURATIONS = [30, 40, 45, 60, 80];
 
 function SectionLabel({ step, label }: { step: string; label: string }) {

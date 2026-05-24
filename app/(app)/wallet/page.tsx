@@ -6,8 +6,10 @@ import {
   useGetPackagesQuery,
   useGetWalletQuery,
   useGetTransactionsQuery,
-  useInitiateTopupMutation,
-  useVerifyTopupMutation,
+  useManualTopupMutation,
+  // TODO: TEMPORARY - Use these when switching back to Paystack
+  // useInitiateTopupMutation,
+  // useVerifyTopupMutation,
 } from "@/lib/services/walletApi";
 
 const PACKAGE_META: Record<string, { label: string; note: string; popular?: boolean; save?: string }> = {
@@ -22,8 +24,11 @@ export default function WalletPage() {
   const { data: pkgData } = useGetPackagesQuery();
   const { data: walletData } = useGetWalletQuery();
   const { data: txData } = useGetTransactionsQuery({ limit: 20 });
-  const [initiateTopup, { isLoading: initiating }] = useInitiateTopupMutation();
-  const [verifyTopup] = useVerifyTopupMutation();
+  // TODO: TEMPORARY - Using manual topup for testing
+  const [manualTopup, { isLoading: initiating }] = useManualTopupMutation();
+  // TODO: TEMPORARY - Paystack flow commented out
+  // const [initiateTopup, { isLoading: initiating }] = useInitiateTopupMutation();
+  // const [verifyTopup] = useVerifyTopupMutation();
 
   const packages = pkgData?.data?.packages ?? [];
   const balance = walletData?.data?.balance ?? "0";
@@ -34,16 +39,21 @@ export default function WalletPage() {
     if (selectedIdx === null) return;
     const pkg = packages[selectedIdx];
     try {
-      const res = await initiateTopup({ packageId: pkg.id }).unwrap();
-      window.open(res.data.authorizationUrl, "_blank");
-      const handleFocus = async () => {
-        try {
-          await verifyTopup({ reference: res.data.reference }).unwrap();
-        } finally {
-          window.removeEventListener("focus", handleFocus);
-        }
-      };
-      window.addEventListener("focus", handleFocus);
+      // TODO: TEMPORARY - Using manual topup endpoint
+      await manualTopup({ packageId: pkg.id }).unwrap();
+      // UI updates automatically via invalidatesTags: ['Wallet', 'Transactions']
+      
+      // TODO: TEMPORARY - Paystack flow commented out below
+      // const res = await initiateTopup({ packageId: pkg.id }).unwrap();
+      // window.open(res.data.authorizationUrl, "_blank");
+      // const handleFocus = async () => {
+      //   try {
+      //     await verifyTopup({ reference: res.data.reference }).unwrap();
+      //   } finally {
+      //     window.removeEventListener("focus", handleFocus);
+      //   }
+      // };
+      // window.addEventListener("focus", handleFocus);
     } catch {
       // RTK handles error state
     }

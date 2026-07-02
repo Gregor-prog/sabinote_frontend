@@ -4,11 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { IconBack, IconBolt } from "@/components/icons";
-import { useGetCurriculumStatesQuery, useGetCurriculumSubjectsQuery, useGetCurriculumWeeksQuery } from "@/lib/services/curriculumApi";
+import { useGetCurriculumSubjectsQuery, useGetCurriculumWeeksQuery } from "@/lib/services/curriculumApi";
 import { useGenerateLessonPlanMutation } from "@/lib/services/generateApi";
 import { useGetMeQuery } from "@/lib/services/authApi";
 import { useGetWalletQuery } from "@/lib/services/walletApi";
-import { CLASS_LEVELS_UI } from "@/lib/constants";
+import { CLASS_LEVELS_UI, NIGERIAN_STATES } from "@/lib/constants";
 
 const CLASSES = CLASS_LEVELS_UI;
 // General curriculum is seeded with "SS1/SS2/SS3" (2 S's); state curriculum
@@ -49,14 +49,12 @@ export default function GeneratePage() {
   const profileState = meData?.data?.state ?? "";
   const resolvedState = state || profileState;
 
-  const { data: statesData } = useGetCurriculumStatesQuery();
-
   const { data: subjectsData, isFetching: loadingSubjects } = useGetCurriculumSubjectsQuery(
     { state: resolvedState, classLevel: toApiClass(classLevel) },
     { skip: !resolvedState || !classLevel }
   );
 
-  const { data: weeksData } = useGetCurriculumWeeksQuery(
+  const { data: weeksData, isFetching: loadingWeeks } = useGetCurriculumWeeksQuery(
     { state: resolvedState, subject, classLevel: toApiClass(classLevel), term },
     { skip: !resolvedState || !subject || !classLevel }
   );
@@ -203,7 +201,7 @@ export default function GeneratePage() {
             <select value={resolvedState} onChange={e => { setState(e.target.value); setSubject(""); setSelectedWeek(null); }}
               className={selectClass} style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
               <option value="">Select state...</option>
-              {(statesData?.data?.states ?? []).map(s => <option key={s} value={s}>{s}</option>)}
+              {NIGERIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown /></div>
           </div>
@@ -271,12 +269,26 @@ export default function GeneratePage() {
             <div className="rounded-xl px-4 py-4 text-sm text-center" style={{ background: "white", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
               Select class and subject to see topics
             </div>
-          ) : weeks.length === 0 ? (
+          ) : loadingWeeks ? (
             <div className="rounded-xl px-4 py-4 text-sm text-center" style={{ background: "white", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
               Loading curriculum...
             </div>
+          ) : weeks.length === 0 ? (
+            <div className="rounded-xl px-4 py-4 text-sm text-center" style={{ background: "white", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+              No topics available for this selection yet. Try another term or subject.
+            </div>
           ) : (
             <div className="space-y-1.5">
+              {weeks.every(w => w.source === "general") && (
+                <div
+                  className="rounded-xl px-4 py-3 text-xs leading-relaxed mb-1"
+                  style={{ background: "var(--color-primary-dim)", color: "oklch(35% 0.15 290)" }}
+                >
+                  <span className="font-semibold">{resolvedState}</span> doesn&apos;t have a state-specific scheme
+                  for this subject yet, so these topics follow the national (NERDC) curriculum. Your note
+                  will still match your class, term, and week.
+                </div>
+              )}
               {weeks.map(w => {
                 const isSelected = selectedWeekId === w.id;
                 const isNational = w.source === 'general';

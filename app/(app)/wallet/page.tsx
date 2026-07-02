@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Script from "next/script";
 import { IconCheck } from "@/components/icons";
 import {
   useGetPackagesQuery,
@@ -10,22 +9,6 @@ import {
   useInitiateTopupMutation,
   useVerifyTopupMutation,
 } from "@/lib/services/walletApi";
-
-declare global {
-  interface Window {
-    PaystackPop?: {
-      setup: (opts: {
-        key: string;
-        email: string;
-        amount: number;
-        ref: string;
-        currency?: string;
-        onClose: () => void;
-        callback: (response: { reference: string }) => void;
-      }) => { openIframe: () => void };
-    };
-  }
-}
 
 type PayState = "idle" | "opening" | "verifying" | "success" | "failed";
 
@@ -45,7 +28,6 @@ const PACKAGE_META: Record<
 export default function WalletPage() {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [payState, setPayState] = useState<PayState>("idle");
-  const [scriptReady, setScriptReady] = useState(false);
 
   const { data: pkgData } = useGetPackagesQuery();
   const { data: walletData, refetch: refetchWallet } = useGetWalletQuery();
@@ -66,23 +48,26 @@ export default function WalletPage() {
   }, [payState]);
 
   async function handlePurchase() {
-    if (selectedIdx === null || !scriptReady || !window.PaystackPop) return;
+    if (selectedIdx === null) return;
     const pkg = packages[selectedIdx];
     setPayState("opening");
     try {
       const res = await initiateTopup({ packageId: pkg.id }).unwrap();
       const { email, reference } = res.data;
 
-      window.PaystackPop.setup({
+      const PaystackPop = (await import("@paystack/inline-js")).default;
+      const popup = new PaystackPop();
+      popup.newTransaction({
         key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "",
         email,
         amount: pkg.priceNGN * 100, // kobo
-        ref: reference,
+        reference,
         currency: "NGN",
-        onClose: () => setPayState("idle"),
-        callback: (response) => {
+        onCancel: () => setPayState("idle"),
+        onError: () => setPayState("idle"),
+        onSuccess: (transaction: { reference: string }) => {
           setPayState("verifying");
-          verifyTopup({ reference: response.reference })
+          verifyTopup({ reference: transaction.reference })
             .unwrap()
             .then(() => {
               setPayState("success");
@@ -92,10 +77,9 @@ export default function WalletPage() {
             })
             .catch(() => setPayState("failed"));
         },
-      }).openIframe();
+      });
     } catch {
       setPayState("idle");
-      // RTK Query surfaces the error; no additional handling needed
     }
   }
 
@@ -104,13 +88,6 @@ export default function WalletPage() {
       className="flex flex-col min-h-full"
       style={{ background: "var(--color-surface)" }}
     >
-      <Script
-        src="https://js.paystack.co/v1/inline.js"
-        strategy="afterInteractive"
-        onReady={() => setScriptReady(true)}
-        onLoad={() => setScriptReady(true)}
-      />
-
       {/* ── Header ── */}
       <div className="px-5 pt-7 pb-4">
         <p
@@ -335,7 +312,6 @@ export default function WalletPage() {
             selectedIdx === null ||
             payState === "opening" ||
             payState === "verifying" ||
-            !scriptReady ||
             packages.length === 0
           }
           className="w-full py-4 mt-4 rounded-2xl font-semibold text-sm text-white disabled:opacity-40"

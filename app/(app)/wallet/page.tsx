@@ -1,16 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Script from "next/script";
 import { IconCheck } from "@/components/icons";
 import {
   useGetPackagesQuery,
   useGetWalletQuery,
   useGetTransactionsQuery,
-  useManualTopupMutation,
-  // TODO: TEMPORARY - Use these when switching back to Paystack
-  // useInitiateTopupMutation,
-  // useVerifyTopupMutation,
+  useInitiateTopupMutation,
+  useVerifyTopupMutation,
 } from "@/lib/services/walletApi";
+
+declare global {
+  interface Window {
+    PaystackPop?: {
+      setup: (opts: {
+        key: string;
+        email: string;
+        amount: number;
+        ref: string;
+        currency?: string;
+        onClose: () => void;
+        callback: (response: { reference: string }) => void;
+      }) => { openIframe: () => void };
+    };
+  }
+}
+
+type PayState = "idle" | "opening" | "verifying" | "success" | "failed";
 
 const PACKAGE_META: Record<
   string,
@@ -27,42 +44,58 @@ const PACKAGE_META: Record<
 
 export default function WalletPage() {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [payState, setPayState] = useState<PayState>("idle");
+  const [scriptReady, setScriptReady] = useState(false);
 
   const { data: pkgData } = useGetPackagesQuery();
-  const { data: walletData } = useGetWalletQuery();
-  const { data: txData } = useGetTransactionsQuery({ limit: 20 });
-  // TODO: TEMPORARY - Using manual topup for testing
-  const [manualTopup, { isLoading: initiating }] = useManualTopupMutation();
-  // TODO: TEMPORARY - Paystack flow commented out
-  // const [initiateTopup, { isLoading: initiating }] = useInitiateTopupMutation();
-  // const [verifyTopup] = useVerifyTopupMutation();
+  const { data: walletData, refetch: refetchWallet } = useGetWalletQuery();
+  const { data: txData, refetch: refetchTx } = useGetTransactionsQuery({ limit: 20 });
+  const [initiateTopup] = useInitiateTopupMutation();
+  const [verifyTopup] = useVerifyTopupMutation();
 
   const packages = pkgData?.data?.packages ?? [];
   const balance = walletData?.data?.balance ?? "0";
   const transactions = txData?.data?.transactions ?? [];
   const estimatedLessons = Math.floor(Number(balance) / 20);
 
-  async function handlePurchase() {
-    if (selectedIdx === null) return;
-    const pkg = packages[selectedIdx];
-    try {
-      // TODO: TEMPORARY - Using manual topup endpoint
-      await manualTopup({ packageId: pkg.id }).unwrap();
-      // UI updates automatically via invalidatesTags: ['Wallet', 'Transactions']
+  // "success"/"failed" are transient banners — clear back to idle after a beat
+  useEffect(() => {
+    if (payState !== "success" && payState !== "failed") return;
+    const t = setTimeout(() => setPayState("idle"), 4000);
+    return () => clearTimeout(t);
+  }, [payState]);
 
-      // TODO: TEMPORARY - Paystack flow commented out below
-      // const res = await initiateTopup({ packageId: pkg.id }).unwrap();
-      // window.open(res.data.authorizationUrl, "_blank");
-      // const handleFocus = async () => {
-      //   try {
-      //     await verifyTopup({ reference: res.data.reference }).unwrap();
-      //   } finally {
-      //     window.removeEventListener("focus", handleFocus);
-      //   }
-      // };
-      // window.addEventListener("focus", handleFocus);
+  async function handlePurchase() {
+    if (selectedIdx === null || !scriptReady || !window.PaystackPop) return;
+    const pkg = packages[selectedIdx];
+    setPayState("opening");
+    try {
+      const res = await initiateTopup({ packageId: pkg.id }).unwrap();
+      const { email, reference } = res.data;
+
+      window.PaystackPop.setup({
+        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "",
+        email,
+        amount: pkg.priceNGN * 100, // kobo
+        ref: reference,
+        currency: "NGN",
+        onClose: () => setPayState("idle"),
+        callback: (response) => {
+          setPayState("verifying");
+          verifyTopup({ reference: response.reference })
+            .unwrap()
+            .then(() => {
+              setPayState("success");
+              refetchWallet();
+              refetchTx();
+              setSelectedIdx(null);
+            })
+            .catch(() => setPayState("failed"));
+        },
+      }).openIframe();
     } catch {
-      // RTK handles error state
+      setPayState("idle");
+      // RTK Query surfaces the error; no additional handling needed
     }
   }
 
@@ -71,6 +104,13 @@ export default function WalletPage() {
       className="flex flex-col min-h-full"
       style={{ background: "var(--color-surface)" }}
     >
+      <Script
+        src="https://js.paystack.co/v1/inline.js"
+        strategy="afterInteractive"
+        onReady={() => setScriptReady(true)}
+        onLoad={() => setScriptReady(true)}
+      />
+
       {/* ── Header ── */}
       <div className="px-5 pt-7 pb-4">
         <p
@@ -291,16 +331,41 @@ export default function WalletPage() {
 
         <button
           onClick={handlePurchase}
-          disabled={selectedIdx === null || initiating || packages.length === 0}
+          disabled={
+            selectedIdx === null ||
+            payState === "opening" ||
+            payState === "verifying" ||
+            !scriptReady ||
+            packages.length === 0
+          }
           className="w-full py-4 mt-4 rounded-2xl font-semibold text-sm text-white disabled:opacity-40"
           style={{ background: "oklch(40% 0.22 290)" }}
         >
-          {initiating
-            ? "Opening payment..."
-            : selectedIdx !== null
-              ? `Pay ₦${packages[selectedIdx].priceNGN.toLocaleString()}`
-              : "Select a package"}
+          {payState === "opening"
+            ? "Opening secure checkout…"
+            : payState === "verifying"
+              ? "Confirming payment…"
+              : selectedIdx !== null
+                ? `Pay ₦${packages[selectedIdx].priceNGN.toLocaleString()}`
+                : "Select a package"}
         </button>
+
+        {payState === "success" && (
+          <p
+            className="text-center text-xs font-semibold mt-2.5 flex items-center justify-center gap-1.5"
+            style={{ color: "#059669" }}
+          >
+            <IconCheck className="w-3 h-3" />
+            Payment confirmed — Parats added to your wallet
+          </p>
+        )}
+        {payState === "failed" && (
+          <p className="text-center text-xs mt-2.5" style={{ color: "#DC2626" }}>
+            Couldn&apos;t confirm payment yet. If money left your account, it will
+            credit automatically within a few minutes.
+          </p>
+        )}
+
         <p
           className="text-center text-xs mt-2 flex items-center justify-center gap-1.5"
           style={{ color: "var(--color-text-muted)" }}

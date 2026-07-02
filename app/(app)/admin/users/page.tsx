@@ -36,11 +36,11 @@ function CreditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div role="dialog" aria-modal="true" aria-label="Credit wallet" className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-gray-900">Credit Wallet</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
         <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 mb-5">
           <div className="w-9 h-9 rounded-full bg-[#641BC4]/15 flex items-center justify-center shrink-0">
@@ -81,7 +81,7 @@ function CreditModal({
             type="submit"
             disabled={isLoading}
             className="w-full py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-50 transition"
-            style={{ background: 'linear-gradient(135deg,#7C3AED,#641BC4)' }}
+            style={{ background: 'var(--color-primary)' }}
           >
             {isLoading ? 'Crediting…' : 'Credit Wallet'}
           </button>

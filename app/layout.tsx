@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   title: "SabiNote — AI Lesson Notes for Nigerian Educators",
   description:
     "Generate NERDC-compliant, curriculum-aligned lesson notes in seconds. Built for Nigerian teachers.",
+  themeColor: "#F7F6FA",
 };
 
 export default function RootLayout({

@@ -279,7 +279,7 @@ function CsvUploadMode() {
             onClick={handleSeed}
             disabled={isLoading}
             className="w-full py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-50 transition"
-            style={{ background: 'linear-gradient(135deg,#7C3AED,#641BC4)' }}
+            style={{ background: 'var(--color-primary)' }}
           >
             {isLoading ? 'Uploading…' : `Upload ${parsed.length} weeks`}
           </button>
@@ -353,7 +353,7 @@ function SingleWeekForm() {
       {field('Reference Text', <input type="text" value={referenceText} onChange={(e) => setReferenceText(e.target.value)} placeholder="e.g. New General Mathematics JSS1 p.1" className={INPUT_CLS} />)}
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
       {successMsg && <p className="text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg">{successMsg}</p>}
-      <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-50 transition" style={{ background: 'linear-gradient(135deg,#7C3AED,#641BC4)' }}>
+      <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-50 transition" style={{ background: 'var(--color-primary)' }}>
         {isLoading ? 'Saving…' : 'Save Week'}
       </button>
     </form>
@@ -402,7 +402,7 @@ function BulkJsonMode() {
       </div>
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
       {successMsg && <p className="text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg">{successMsg}</p>}
-      <button type="submit" disabled={isLoading || !bulkJson.trim()} className="w-full py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-50 transition" style={{ background: 'linear-gradient(135deg,#7C3AED,#641BC4)' }}>
+      <button type="submit" disabled={isLoading || !bulkJson.trim()} className="w-full py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-50 transition" style={{ background: 'var(--color-primary)' }}>
         {isLoading ? 'Seeding…' : 'Seed Curriculum'}
       </button>
     </form>
@@ -440,7 +440,7 @@ export default function AdminCurriculumPage() {
               key={m.key}
               onClick={() => setMode(m.key)}
               className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
-              style={mode === m.key ? { background: '#641BC4', color: 'white' } : { color: '#6B7280' }}
+              style={mode === m.key ? { background: 'var(--color-primary)', color: 'white' } : { color: 'var(--color-text-muted)' }}
             >
               {m.label}
             </button>

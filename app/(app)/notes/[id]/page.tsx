@@ -5,566 +5,1038 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { IconBack, IconDots, IconBolt, IconDownload } from "@/components/icons";
 import { useGetNoteQuery, useUpdateNoteMutation } from "@/lib/services/notesApi";
-import { useGenerateLessonNoteMutation, useRegenerateMutation } from "@/lib/services/generateApi";
+import {
+  useGenerateLessonNoteMutation,
+  useRegenerateMutation,
+} from "@/lib/services/generateApi";
 import { useGetWalletQuery } from "@/lib/services/walletApi";
-import type { LessonPlan, LessonNote } from "@/lib/types";
+import type { LessonPlan, LessonNote, LessonPlanObjectives } from "@/lib/types";
 
-// ── Floating Format Toolbar ──────────────────────────────────────────
+// ─── Plain-text hygiene ───────────────────────────────────────────────────────
+// Earlier versions stored contentEditable HTML; normalise everything to plain
+// text once on load so editors, display, and PDF export all agree.
 
-function FormatToolbar() {
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+const toPlain = (s: string) =>
+  s
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
 
-  useEffect(() => {
-    function update() {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-        setPos(null);
-        return;
-      }
-      let node: Node | null = sel.anchorNode;
-      while (node) {
-        if (node instanceof HTMLElement && node.contentEditable === "true") {
-          const r = sel.getRangeAt(0).getBoundingClientRect();
-          setPos({ top: r.top - 46, left: r.left + r.width / 2 });
-          return;
-        }
-        node = node.parentNode;
-      }
-      setPos(null);
-    }
-    document.addEventListener("selectionchange", update);
-    return () => document.removeEventListener("selectionchange", update);
-  }, []);
+const cleanList = (a?: string[]) => (a ?? []).map(toPlain);
 
-  if (!pos) return null;
+const cleanObjectives = (o?: LessonPlanObjectives): LessonPlanObjectives => ({
+  cognitive: cleanList(o?.cognitive),
+  affective: cleanList(o?.affective),
+  psychomotor: cleanList(o?.psychomotor),
+});
 
-  function exec(cmd: string, val?: string) {
-    document.execCommand(cmd, false, val);
-  }
+function cleanPlan(p: LessonPlan): LessonPlan {
+  return {
+    ...p,
+    previousKnowledge: toPlain(p.previousKnowledge ?? ""),
+    entryBehaviour: toPlain(p.entryBehaviour ?? ""),
+    summary: toPlain(p.summary ?? ""),
+    assignment: toPlain(p.assignment ?? ""),
+    instructionalMaterials: cleanList(p.instructionalMaterials),
+    referenceBooks: cleanList(p.referenceBooks),
+    evaluation: cleanList(p.evaluation),
+    objectives: cleanObjectives(p.objectives),
+    presentation: (p.presentation ?? []).map(s => ({
+      ...s,
+      teacherActivity: toPlain(s.teacherActivity ?? ""),
+      studentActivity: toPlain(s.studentActivity ?? ""),
+      content: s.content ? toPlain(s.content) : s.content,
+      duration: s.duration ? toPlain(s.duration) : s.duration,
+    })),
+  };
+}
 
-  const Btn = ({ label, cmd, val, title, style }: {
-    label: React.ReactNode; cmd: string; val?: string; title: string; style?: string;
-  }) => (
-    <button
-      title={title}
-      onMouseDown={e => { e.preventDefault(); exec(cmd, val); }}
-      className={`w-7 h-7 rounded flex items-center justify-center text-white hover:bg-white/20 transition-colors text-sm ${style ?? ""}`}
-    >
-      {label}
-    </button>
-  );
+function cleanNote(n: LessonNote): LessonNote {
+  return {
+    ...n,
+    previousKnowledge: toPlain(n.previousKnowledge ?? ""),
+    entryBehaviour: toPlain(n.entryBehaviour ?? ""),
+    summary: toPlain(n.summary ?? ""),
+    assignment: cleanList(n.assignment),
+    instructionalMaterials: cleanList(n.instructionalMaterials),
+    referenceBooks: cleanList(n.referenceBooks),
+    boardSummary: cleanList(n.boardSummary),
+    objectives: cleanObjectives(n.objectives),
+    presentation: (n.presentation ?? []).map(s => ({
+      ...s,
+      content: s.content ? toPlain(s.content) : s.content,
+      duration: s.duration ? toPlain(s.duration) : s.duration,
+    })),
+    subjectContent: (n.subjectContent ?? []).map(b => ({
+      ...b,
+      subTopic: toPlain(b.subTopic ?? ""),
+      explanation: toPlain(b.explanation ?? ""),
+      keyPoints: cleanList(b.keyPoints),
+      workedExamples: (b.workedExamples ?? []).map(w => ({
+        problem: toPlain(w.problem ?? ""),
+        solution: toPlain(w.solution ?? ""),
+      })),
+    })),
+    evaluation: (n.evaluation ?? []).map(q => ({
+      question: toPlain(q.question ?? ""),
+      expectedAnswer: toPlain(q.expectedAnswer ?? ""),
+    })),
+  };
+}
 
+// ─── Section registry ─────────────────────────────────────────────────────────
+
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+const PLAN_SECTIONS = [
+  "Behavioural Objectives", "Previous Knowledge", "Entry Behaviour",
+  "Instructional Materials", "Reference Books", "Lesson Presentation",
+  "Evaluation Questions", "Lesson Summary", "Assignment",
+];
+
+const NOTE_SECTIONS = [
+  "Objectives", "Previous Knowledge", "Entry Behaviour",
+  "Instructional Materials", "Reference Books", "Lesson Presentation",
+  "Subject Content", "Board Summary", "Evaluation Questions",
+  "Lesson Summary", "Assignment",
+];
+
+type EditKey =
+  | "objectives" | "previousKnowledge" | "entryBehaviour"
+  | "instructionalMaterials" | "referenceBooks" | "presentation"
+  | "evaluation" | "summary" | "assignment"
+  | "subjectContent" | "boardSummary";
+
+// ─── Small shared pieces ──────────────────────────────────────────────────────
+
+const PencilIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.2 3.3a1.8 1.8 0 0 1 2.5 2.5L7 15.5l-3.5 1 1-3.5L14.2 3.3z" />
+  </svg>
+);
+
+function SaveDot({ status }: { status: "idle" | "saving" | "saved" }) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: pos.top,
-        left: pos.left,
-        transform: "translateX(-50%)",
-        zIndex: 9999,
-        background: "#111827",
-        border: "1px solid rgba(255,255,255,0.12)",
-      }}
-      className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg shadow-2xl animate-scale-in"
-    >
-      <Btn label={<b>B</b>} cmd="bold" title="Bold (Ctrl+B)" />
-      <Btn label={<em>I</em>} cmd="italic" title="Italic (Ctrl+I)" />
-      <Btn label={<u>U</u>} cmd="underline" title="Underline (Ctrl+U)" />
-      <div className="w-px h-4 bg-white/20 mx-0.5" />
-      <Btn label="•≡" cmd="insertUnorderedList" title="Bullet list" />
-      <Btn label="1." cmd="insertOrderedList" title="Numbered list" />
-      <div className="w-px h-4 bg-white/20 mx-0.5" />
-      <Btn
-        label={<span className="text-[10px] font-mono">H</span>}
-        cmd="formatBlock"
-        val="h3"
-        title="Heading"
-      />
-      <Btn
-        label={<span className="text-[10px] font-mono">¶</span>}
-        cmd="formatBlock"
-        val="p"
-        title="Paragraph"
-      />
+    <div className="flex items-center gap-1.5">
+      {status === "saving" && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--color-warning)" }} />
+          <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>Saving…</span>
+        </>
+      )}
+      {status === "saved" && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-success)" }} />
+          <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>Saved</span>
+        </>
+      )}
+      {status === "idle" && (
+        <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>Auto-save on</span>
+      )}
     </div>
   );
 }
 
-// ── Rich Text Editor ─────────────────────────────────────────────────
+// ─── Read-only display blocks ─────────────────────────────────────────────────
 
-function Rich({
+const EMPTY_HINT = "Tap to add…";
+
+function ProseBlock({ v }: { v: string }) {
+  if (!v) return <p className="text-[14px] italic" style={{ color: "var(--color-text-muted)" }}>{EMPTY_HINT}</p>;
+  return (
+    <p className="text-[15px] leading-[1.75] whitespace-pre-wrap" style={{ color: "oklch(18% 0.01 290)" }}>
+      {v}
+    </p>
+  );
+}
+
+function ListBlock({ items, numbered = false }: { items: string[]; numbered?: boolean }) {
+  if (!items.length) return <p className="text-[14px] italic" style={{ color: "var(--color-text-muted)" }}>{EMPTY_HINT}</p>;
+  return (
+    <div className="space-y-1.5">
+      {items.map((item, i) => (
+        <div key={i} className="flex items-start gap-2.5">
+          <span
+            className="text-[11px] font-mono mt-[3px] shrink-0 select-none w-4 text-right"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            {numbered ? `${i + 1}.` : "·"}
+          </span>
+          <p className="flex-1 text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(18% 0.01 290)" }}>
+            {item}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ObjectivesBlock({ obj }: { obj: LessonPlanObjectives }) {
+  const groups: { label: string; items: string[] }[] = [
+    { label: "Cognitive", items: obj?.cognitive ?? [] },
+    { label: "Affective", items: obj?.affective ?? [] },
+    { label: "Psychomotor", items: obj?.psychomotor ?? [] },
+  ];
+  return (
+    <div className="space-y-5">
+      {groups.map(g => (
+        <div key={g.label}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-muted)" }}>
+            {g.label}
+          </p>
+          <ListBlock items={g.items} numbered />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StepsBlock({
+  steps,
+  mode,
+}: {
+  steps: LessonPlan["presentation"];
+  mode: "plan" | "note";
+}) {
+  if (!steps.length) return <p className="text-[14px] italic" style={{ color: "var(--color-text-muted)" }}>{EMPTY_HINT}</p>;
+  return (
+    <div>
+      {steps.map((step, i) => (
+        <div key={i} className="relative pl-8">
+          {i < steps.length - 1 && (
+            <div className="absolute left-[13px] top-7 bottom-0 w-px" style={{ background: "var(--color-border)" }} />
+          )}
+          <div
+            className="absolute left-0 top-0.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+            style={{
+              background: "oklch(40% 0.22 290 / 0.1)",
+              color: "var(--color-primary)",
+              border: "1.5px solid oklch(40% 0.22 290 / 0.2)",
+            }}
+          >
+            {step.step}
+          </div>
+          <div className={i < steps.length - 1 ? "pb-7" : "pb-1"}>
+            <div className="flex items-baseline justify-between gap-2 mb-2">
+              <span className="text-[13px] font-semibold" style={{ color: "var(--color-primary)" }}>
+                {step.title}
+              </span>
+              {step.duration && (
+                <span className="text-[11px] font-mono shrink-0" style={{ color: "var(--color-text-muted)" }}>
+                  {step.duration}
+                </span>
+              )}
+            </div>
+            {mode === "plan" ? (
+              <div className="space-y-2.5">
+                {step.teacherActivity && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--color-text-muted)" }}>
+                      Teacher
+                    </p>
+                    <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(20% 0.01 290)" }}>
+                      {step.teacherActivity}
+                    </p>
+                  </div>
+                )}
+                {step.studentActivity && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--color-text-muted)" }}>
+                      Students
+                    </p>
+                    <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(20% 0.01 290)" }}>
+                      {step.studentActivity}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              step.content && (
+                <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(20% 0.01 290)" }}>
+                  {step.content}
+                </p>
+              )
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SubjectContentBlock({ blocks }: { blocks: LessonNote["subjectContent"] }) {
+  if (!blocks.length) return <p className="text-[14px] italic" style={{ color: "var(--color-text-muted)" }}>{EMPTY_HINT}</p>;
+  return (
+    <div className="space-y-8">
+      {blocks.map((b, i) => (
+        <div key={i}>
+          <p className="text-[13px] font-bold mb-2.5" style={{ color: "var(--color-primary)" }}>
+            {i + 1}. {b.subTopic}
+          </p>
+          <p className="text-[15px] leading-[1.75] whitespace-pre-wrap mb-4" style={{ color: "oklch(18% 0.01 290)" }}>
+            {b.explanation}
+          </p>
+          {b.workedExamples.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-muted)" }}>
+                Worked Examples
+              </p>
+              <div className="space-y-2">
+                {b.workedExamples.map((ex, k) => (
+                  <div
+                    key={k}
+                    className="rounded-xl px-4 py-3"
+                    style={{ background: "oklch(96% 0.02 240)", border: "1px solid oklch(90% 0.04 240)" }}
+                  >
+                    <p className="text-[13px] font-semibold mb-1.5" style={{ color: "oklch(30% 0.08 240)" }}>
+                      {ex.problem}
+                    </p>
+                    <p className="text-[13px] font-mono leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(35% 0.06 240)" }}>
+                      {ex.solution}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {b.keyPoints.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-muted)" }}>
+                Key Points
+              </p>
+              <div className="space-y-1.5">
+                {b.keyPoints.map((line, k) => (
+                  <div key={k} className="flex items-start gap-2.5">
+                    <span className="text-[10px] font-bold mt-1 shrink-0" style={{ color: "var(--color-primary)" }}>→</span>
+                    <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(18% 0.01 290)" }}>
+                      {line}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QABlock({ items }: { items: LessonNote["evaluation"] }) {
+  if (!items.length) return <p className="text-[14px] italic" style={{ color: "var(--color-text-muted)" }}>{EMPTY_HINT}</p>;
+  return (
+    <div className="space-y-5">
+      {items.map((qa, i) => (
+        <div key={i}>
+          <div className="flex items-start gap-2.5 mb-1.5">
+            <span className="text-[11px] font-bold shrink-0 mt-[3px]" style={{ color: "var(--color-primary)" }}>
+              Q{i + 1}
+            </span>
+            <p className="flex-1 text-[15px] leading-relaxed font-medium whitespace-pre-wrap" style={{ color: "oklch(14% 0.01 290)" }}>
+              {qa.question}
+            </p>
+          </div>
+          <p className="pl-7 text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(38% 0.01 290)" }}>
+            {qa.expectedAnswer}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Tappable section wrapper ─────────────────────────────────────────────────
+
+function Section({
+  label,
+  children,
+  noBorder,
+  onEdit,
+}: {
+  label: string;
+  children: React.ReactNode;
+  noBorder?: boolean;
+  onEdit: () => void;
+}) {
+  return (
+    <section
+      id={slug(label)}
+      onClick={() => {
+        // Don't hijack a text-selection gesture (copying content)
+        if (window.getSelection()?.toString()) return;
+        onEdit();
+      }}
+      className="section-tap group py-6 -mx-3 px-3 rounded-2xl"
+      style={{
+        scrollMarginTop: 136,
+        borderTop: noBorder ? "none" : "1px solid var(--color-border)",
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "oklch(55% 0.12 290)" }}>
+          {label}
+        </h2>
+        <button
+          aria-label={`Edit ${label}`}
+          onClick={e => { e.stopPropagation(); onEdit(); }}
+          className="flex items-center gap-1 text-[11px] font-medium opacity-35 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity -my-2 py-2 px-1"
+          style={{ color: "var(--color-primary)" }}
+        >
+          <PencilIcon className="w-3 h-3" />
+          Edit
+        </button>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ─── Editor primitives (native inputs — no contentEditable) ───────────────────
+
+function AutoTextarea({
   value,
   onChange,
-  placeholder = "Click to edit…",
-  className = "",
-  inline = false,
+  placeholder,
+  small = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  className?: string;
-  inline?: boolean;
+  small?: boolean;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const lastHtml = useRef<string>("");
-  const isFirst = useRef(true);
-
+  const ref = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
-    if (!ref.current) return;
-    const html = value.includes("<") || value.includes("&amp;")
-      ? value
-      : value.replace(/\n/g, "<br>");
-
-    if (isFirst.current) {
-      isFirst.current = false;
-      ref.current.innerHTML = html;
-      lastHtml.current = ref.current.innerHTML;
-      return;
-    }
-    if (value !== lastHtml.current) {
-      lastHtml.current = html;
-      ref.current.innerHTML = html;
-    }
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${el.scrollHeight}px`;
   }, [value]);
-
   return (
-    <div
+    <textarea
       ref={ref}
-      contentEditable
-      suppressContentEditableWarning
-      data-placeholder={placeholder}
-      onKeyDown={inline ? e => { if (e.key === "Enter") e.preventDefault(); } : undefined}
-      onPaste={e => {
-        e.preventDefault();
-        const text = e.clipboardData.getData("text/plain");
-        document.execCommand("insertText", false, text);
-      }}
-      onInput={() => {
-        if (!ref.current) return;
-        const html = ref.current.innerHTML;
-        lastHtml.current = html;
-        onChange(html);
-      }}
-      className={`outline-none leading-relaxed text-gray-800 ${className}`}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={1}
+      className={`w-full resize-none outline-none bg-transparent leading-relaxed ${small ? "text-[13px]" : "text-[15px]"}`}
+      style={{ color: "oklch(15% 0.01 290)" }}
     />
   );
 }
 
-// ── Editable List ────────────────────────────────────────────────────
+function FieldShell({ label, children }: { label?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      {label && (
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--color-text-muted)" }}>
+          {label}
+        </p>
+      )}
+      <div className="rounded-xl px-3.5 py-2.5 bg-white" style={{ border: "1px solid var(--color-border)" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
-function EditableList({
+function ProseEditor({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <FieldShell>
+      <AutoTextarea value={value} onChange={onChange} placeholder={placeholder} />
+    </FieldShell>
+  );
+}
+
+function ListEditor({
   items,
   onChange,
   numbered = false,
+  addLabel = "Add item",
 }: {
   items: string[];
   onChange: (items: string[]) => void;
   numbered?: boolean;
+  addLabel?: string;
 }) {
   return (
     <div className="space-y-2">
       {items.map((item, i) => (
-        <div key={i} className="flex items-start gap-2 group">
-          <span className="text-xs font-mono text-gray-300 mt-[3px] w-5 shrink-0 select-none">
-            {numbered ? `${i + 1}.` : "•"}
+        <div key={i} className="flex items-start gap-2">
+          <span
+            className="text-[11px] font-mono mt-3 shrink-0 select-none w-4 text-right"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            {numbered ? `${i + 1}.` : "·"}
           </span>
-          <div className="flex-1">
-            <Rich
+          <div className="flex-1 rounded-xl px-3.5 py-2.5 bg-white" style={{ border: "1px solid var(--color-border)" }}>
+            <AutoTextarea
               value={item}
-              onChange={v => {
-                const next = [...items];
-                next[i] = v;
-                onChange(next);
-              }}
-              inline
-              placeholder="Add item…"
-              className="text-sm text-gray-700 w-full min-h-[1.4rem] border-b border-transparent focus-within:border-purple-200 pb-0.5 transition-colors"
+              onChange={v => onChange(items.map((x, j) => (j === i ? v : x)))}
             />
           </div>
           <button
             onClick={() => onChange(items.filter((_, j) => j !== i))}
-            className="text-gray-200 hover:text-red-400 text-xs mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="w-9 h-9 mt-1 rounded-lg flex items-center justify-center text-lg leading-none shrink-0 transition-colors text-gray-300 hover:text-red-400"
+            aria-label="Remove item"
           >
-            ✕
+            ×
           </button>
         </div>
       ))}
       <button
         onClick={() => onChange([...items, ""])}
-        className="text-xs font-medium mt-1 flex items-center gap-1"
-        style={{ color: "oklch(40% 0.22 290)" }}
+        className="text-[13px] font-semibold flex items-center gap-1.5 ml-6 mt-1"
+        style={{ color: "var(--color-primary)" }}
       >
-        <span className="text-base leading-none">+</span> Add item
+        <span className="text-base leading-none">+</span> {addLabel}
       </button>
     </div>
   );
 }
 
-// ── Document Section ─────────────────────────────────────────────────
-
-function DocSection({
-  num,
-  title,
-  children,
-  accent,
+function ObjectivesEditor({
+  value,
+  onChange,
 }: {
-  num: string;
-  title: string;
-  children: React.ReactNode;
-  accent?: string;
+  value: LessonPlanObjectives;
+  onChange: (v: LessonPlanObjectives) => void;
+}) {
+  const groups = [
+    { key: "cognitive" as const, label: "Cognitive" },
+    { key: "affective" as const, label: "Affective" },
+    { key: "psychomotor" as const, label: "Psychomotor" },
+  ];
+  return (
+    <div className="space-y-6">
+      {groups.map(g => (
+        <div key={g.key}>
+          <p className="text-[11px] font-bold uppercase tracking-wider mb-2.5" style={{ color: "oklch(55% 0.12 290)" }}>
+            {g.label}
+          </p>
+          <ListEditor
+            items={value?.[g.key] ?? []}
+            onChange={items => onChange({ ...value, [g.key]: items })}
+            numbered
+            addLabel="Add objective"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StepsEditor({
+  steps,
+  mode,
+  onChange,
+}: {
+  steps: LessonPlan["presentation"];
+  mode: "plan" | "note";
+  onChange: (steps: LessonPlan["presentation"]) => void;
+}) {
+  const set = (i: number, patch: Partial<LessonPlan["presentation"][0]>) =>
+    onChange(steps.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+
+  return (
+    <div className="space-y-7">
+      {steps.map((step, i) => (
+        <div key={i}>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                style={{ background: "oklch(40% 0.22 290 / 0.1)", color: "var(--color-primary)" }}
+              >
+                {step.step}
+              </span>
+              <span className="text-[13px] font-semibold truncate" style={{ color: "var(--color-primary)" }}>
+                {step.title}
+              </span>
+            </div>
+            <input
+              value={step.duration ?? ""}
+              onChange={e => set(i, { duration: e.target.value })}
+              aria-label={`Duration for step ${step.step}`}
+              placeholder="5 mins"
+              className="w-20 shrink-0 text-[12px] font-mono text-right rounded-lg px-2 py-1.5 outline-none bg-white"
+              style={{ border: "1px solid var(--color-border)", color: "oklch(30% 0.01 290)" }}
+            />
+          </div>
+          {mode === "plan" ? (
+            <div className="space-y-3">
+              <FieldShell label="Teacher activity">
+                <AutoTextarea
+                  value={step.teacherActivity ?? ""}
+                  onChange={v => set(i, { teacherActivity: v })}
+                  placeholder="What the teacher does…"
+                />
+              </FieldShell>
+              <FieldShell label="Student activity">
+                <AutoTextarea
+                  value={step.studentActivity ?? ""}
+                  onChange={v => set(i, { studentActivity: v })}
+                  placeholder="What students do…"
+                />
+              </FieldShell>
+            </div>
+          ) : (
+            <FieldShell label="Content">
+              <AutoTextarea
+                value={step.content ?? ""}
+                onChange={v => set(i, { content: v })}
+                placeholder="Teacher narrative for this step…"
+              />
+            </FieldShell>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SubjectContentEditor({
+  blocks,
+  onChange,
+}: {
+  blocks: LessonNote["subjectContent"];
+  onChange: (blocks: LessonNote["subjectContent"]) => void;
+}) {
+  const set = (i: number, patch: Partial<LessonNote["subjectContent"][0]>) =>
+    onChange(blocks.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+
+  return (
+    <div className="space-y-8">
+      {blocks.map((b, i) => (
+        <div key={i}>
+          <p className="text-[13px] font-bold mb-3" style={{ color: "var(--color-primary)" }}>
+            {i + 1}. {b.subTopic}
+          </p>
+          <div className="space-y-4">
+            <FieldShell label="Explanation">
+              <AutoTextarea
+                value={b.explanation}
+                onChange={v => set(i, { explanation: v })}
+                placeholder="Explain this sub-topic…"
+              />
+            </FieldShell>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-muted)" }}>
+                Worked Examples
+              </p>
+              <div className="space-y-3">
+                {b.workedExamples.map((ex, k) => (
+                  <div
+                    key={k}
+                    className="rounded-xl p-3 space-y-2 relative"
+                    style={{ background: "oklch(96% 0.02 240)", border: "1px solid oklch(90% 0.04 240)" }}
+                  >
+                    <button
+                      onClick={() => set(i, { workedExamples: b.workedExamples.filter((_, m) => m !== k) })}
+                      className="absolute top-0 right-0 w-9 h-9 flex items-center justify-center text-base leading-none text-gray-300 hover:text-red-400 transition-colors"
+                      aria-label="Remove example"
+                    >
+                      ×
+                    </button>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "oklch(45% 0.06 240)" }}>
+                        Problem
+                      </p>
+                      <AutoTextarea
+                        small
+                        value={ex.problem}
+                        onChange={v =>
+                          set(i, { workedExamples: b.workedExamples.map((x, m) => (m === k ? { ...x, problem: v } : x)) })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "oklch(45% 0.06 240)" }}>
+                        Solution
+                      </p>
+                      <AutoTextarea
+                        small
+                        value={ex.solution}
+                        onChange={v =>
+                          set(i, { workedExamples: b.workedExamples.map((x, m) => (m === k ? { ...x, solution: v } : x)) })
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={() => set(i, { workedExamples: [...b.workedExamples, { problem: "", solution: "" }] })}
+                  className="text-[13px] font-semibold flex items-center gap-1.5"
+                  style={{ color: "var(--color-primary)" }}
+                >
+                  <span className="text-base leading-none">+</span> Add example
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-muted)" }}>
+                Key Points
+              </p>
+              <ListEditor
+                items={b.keyPoints}
+                onChange={items => set(i, { keyPoints: items })}
+                addLabel="Add key point"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QAEditor({
+  items,
+  onChange,
+}: {
+  items: LessonNote["evaluation"];
+  onChange: (items: LessonNote["evaluation"]) => void;
 }) {
   return (
-    <div className="mb-0">
-      <div
-        className="flex items-center gap-2 py-3 cursor-default select-none"
-        style={{ borderTop: "1px solid var(--color-border)" }}
+    <div className="space-y-5">
+      {items.map((qa, i) => (
+        <div key={i} className="relative">
+          <button
+            onClick={() => onChange(items.filter((_, j) => j !== i))}
+            className="absolute -top-2 right-0 w-9 h-9 flex items-center justify-center text-base leading-none text-gray-300 hover:text-red-400 transition-colors"
+            aria-label="Remove question"
+          >
+            ×
+          </button>
+          <p className="text-[11px] font-bold mb-2" style={{ color: "var(--color-primary)" }}>
+            Question {i + 1}
+          </p>
+          <div className="space-y-2.5">
+            <FieldShell label="Question">
+              <AutoTextarea
+                value={qa.question}
+                onChange={v => onChange(items.map((x, j) => (j === i ? { ...x, question: v } : x)))}
+              />
+            </FieldShell>
+            <FieldShell label="Expected answer">
+              <AutoTextarea
+                value={qa.expectedAnswer}
+                onChange={v => onChange(items.map((x, j) => (j === i ? { ...x, expectedAnswer: v } : x)))}
+              />
+            </FieldShell>
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={() => onChange([...items, { question: "", expectedAnswer: "" }])}
+        className="text-[13px] font-semibold flex items-center gap-1.5"
+        style={{ color: "var(--color-primary)" }}
       >
-        <span className="text-[10px] font-mono font-bold tracking-widest text-gray-300">{num}</span>
-        <h3
-          className="text-[11px] font-bold uppercase tracking-widest"
-          style={{ color: accent ?? "#9CA3AF" }}
+        <span className="text-base leading-none">+</span> Add question
+      </button>
+    </div>
+  );
+}
+
+// ─── Focused editor sheet ─────────────────────────────────────────────────────
+// Edits apply to state (and the debounced auto-save) on every keystroke, so
+// closing is always safe. "Done" is the only control; there is nothing to lose.
+
+function EditorSheet({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Move focus into the dialog on open, return it on close
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    sheetRef.current?.focus();
+    return () => prev?.focus?.();
+  }, []);
+
+  const trapTab = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab" || !sheetRef.current) return;
+    const focusables = sheetRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
+      style={{ background: "rgba(10, 5, 18, 0.4)" }}
+      onClick={onClose}
+    >
+      <div
+        ref={sheetRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Edit ${title}`}
+        onKeyDown={trapTab}
+        className="w-full flex flex-col rounded-t-3xl lg:rounded-3xl overflow-hidden animate-fade-up outline-none"
+        style={{
+          background: "oklch(98.5% 0.002 290)",
+          maxWidth: 560,
+          margin: "0 auto",
+          maxHeight: "92dvh",
+          height: "auto",
+          minHeight: "40dvh",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div
+          className="shrink-0 px-5 pt-3 pb-3 bg-white flex items-center gap-3"
+          style={{ borderBottom: "1px solid var(--color-border)" }}
         >
-          {title}
-        </h3>
+          <div className="flex-1 min-w-0">
+            <div className="w-9 h-1 rounded-full mb-2 lg:hidden" style={{ background: "var(--color-border)" }} />
+            <p className="text-[15px] font-bold truncate" style={{ color: "oklch(12% 0.01 290)" }}>
+              {title}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="shrink-0 h-9 px-5 rounded-xl text-[13px] font-semibold text-white transition"
+            style={{ background: "var(--color-primary)" }}
+          >
+            Done
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-5">
+          {children}
+          <div className="h-6" />
+        </div>
       </div>
-      <div className="pb-5 pl-1">{children}</div>
     </div>
   );
 }
 
-// ── Metadata Strip ───────────────────────────────────────────────────
+// ─── Skeletons ────────────────────────────────────────────────────────────────
 
-function MetaRow({ plan }: { plan: { metadata: LessonPlan["metadata"] } | null }) {
-  if (!plan) return null;
-  const m = plan.metadata;
+function SkeletonDoc() {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-6 pb-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-      <span><strong className="text-gray-600">Subject</strong> {m.subject}</span>
-      <span><strong className="text-gray-600">Class</strong> {m.classLevel}</span>
-      <span><strong className="text-gray-600">Term</strong> {m.term}</span>
-      <span><strong className="text-gray-600">Week</strong> {m.week}</span>
-      <span><strong className="text-gray-600">Duration</strong> {m.duration} min</span>
-      <span><strong className="text-gray-600">Session</strong> {m.session}</span>
+    <div className="px-5 pt-6 pb-10 space-y-6 animate-fade-up">
+      <div className="space-y-2">
+        <div className="animate-shimmer h-7 w-3/4 rounded-lg" />
+        <div className="animate-shimmer h-4 w-1/2 rounded-lg" />
+      </div>
+      <div className="space-y-2 pt-4">
+        <div className="animate-shimmer h-2.5 w-16 rounded" />
+        <div className="animate-shimmer h-4 w-full rounded-lg" />
+        <div className="animate-shimmer h-4 w-5/6 rounded-lg" />
+        <div className="animate-shimmer h-4 w-4/5 rounded-lg" />
+      </div>
+      <div className="space-y-2 pt-2">
+        <div className="animate-shimmer h-2.5 w-20 rounded" />
+        <div className="animate-shimmer h-4 w-full rounded-lg" />
+        <div className="animate-shimmer h-4 w-3/4 rounded-lg" />
+      </div>
+      <div className="space-y-2 pt-2">
+        <div className="animate-shimmer h-2.5 w-24 rounded" />
+        {[90, 100, 80, 95, 70].map((w, i) => (
+          <div key={i} className="animate-shimmer h-4 rounded-lg" style={{ width: `${w}%` }} />
+        ))}
+      </div>
     </div>
   );
 }
 
-// ── Plan Canvas ────────────────────────────────────────────────────────
-
-function PlanCanvas({ plan, onChange }: { plan: LessonPlan; onChange: (p: LessonPlan) => void }) {
-  const set = <K extends keyof LessonPlan>(key: K, val: LessonPlan[K]) =>
-    onChange({ ...plan, [key]: val });
-
+function GeneratingSkeleton() {
   return (
-    <div className="text-[15px]">
-      <MetaRow plan={plan} />
+    <div className="pt-4 pb-10 animate-fade-up">
+      <div className="flex items-center gap-2.5 mb-8">
+        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--color-primary)" }} />
+        <p className="text-[13px] font-semibold" style={{ color: "var(--color-primary)" }}>
+          Writing your lesson note…
+        </p>
+      </div>
+      <div className="space-y-3">
+        {[100, 85, 92, 78, 95, 65, 88, 100, 72, 84, 60, 95].map((w, i) => (
+          <div
+            key={i}
+            className="animate-shimmer h-3.5 rounded"
+            style={{ width: `${w}%`, animationDelay: `${i * 80}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      <DocSection num="01" title="Behavioural Objectives">
-        <div className="space-y-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Cognitive</p>
-            <EditableList items={plan.objectives?.cognitive || []} onChange={v => set("objectives", { ...plan.objectives, cognitive: v })} numbered />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Affective</p>
-            <EditableList items={plan.objectives?.affective || []} onChange={v => set("objectives", { ...plan.objectives, affective: v })} numbered />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Psychomotor</p>
-            <EditableList items={plan.objectives?.psychomotor || []} onChange={v => set("objectives", { ...plan.objectives, psychomotor: v })} numbered />
-          </div>
+// ─── Export sheet ─────────────────────────────────────────────────────────────
+
+function ExportSheet({
+  onClose,
+  onExport,
+}: {
+  onClose: () => void;
+  onExport: (fmt: "pdf" | "docx") => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
+      style={{ background: "rgba(0,0,0,0.3)" }}
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Export material"
+        className="w-full rounded-t-3xl lg:rounded-3xl overflow-hidden animate-fade-up"
+        style={{ background: "white", maxWidth: 430, margin: "0 auto" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <div className="w-10 h-1 rounded-full mx-auto mb-4 lg:hidden" style={{ background: "var(--color-border)" }} />
+          <p className="text-[15px] font-bold" style={{ color: "oklch(12% 0.01 290)" }}>
+            Export Material
+          </p>
+          <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+            Download a copy of this lesson note
+          </p>
         </div>
-      </DocSection>
 
-      <DocSection num="02" title="Previous Knowledge">
-        <Rich
-          value={plan.previousKnowledge || ""}
-          onChange={v => set("previousKnowledge", v)}
-          placeholder="What have students already learned that connects to this topic?"
-          className="text-sm min-h-[3rem] w-full"
-        />
-      </DocSection>
-
-      <DocSection num="03" title="Entry Behaviour">
-        <Rich
-          value={plan.entryBehaviour || ""}
-          onChange={v => set("entryBehaviour", v)}
-          placeholder="Describe prior knowledge students should have…"
-          className="text-sm min-h-[3rem] w-full"
-        />
-      </DocSection>
-
-      <DocSection num="04" title="Instructional Materials">
-        <EditableList items={plan.instructionalMaterials || []} onChange={v => set("instructionalMaterials", v)} />
-      </DocSection>
-
-      <DocSection num="05" title="Reference Books">
-        <EditableList items={plan.referenceBooks || []} onChange={v => set("referenceBooks", v)} />
-      </DocSection>
-
-      <DocSection num="06" title="Presentation">
-        <div className="space-y-4">
-          {(plan.presentation || []).map((step, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(40% 0.22 290)" }}>
-                  Step {step.step}: {step.title}
-                </span>
-                <Rich
-                  value={step.duration || ""}
-                  onChange={v => {
-                    const next = plan.presentation.map((s, j) =>
-                      j === i ? { ...s, duration: v } : s
-                    );
-                    set("presentation", next);
-                  }}
-                  inline
-                  className="text-xs text-gray-400 text-right"
-                />
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Teacher Activity</p>
-                  <Rich
-                    value={step.teacherActivity || ""}
-                    onChange={v => {
-                      const next = plan.presentation.map((s, j) =>
-                        j === i ? { ...s, teacherActivity: v } : s
-                      );
-                      set("presentation", next);
-                    }}
-                    className="text-sm min-h-[2rem] w-full"
-                  />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Student Activity</p>
-                  <Rich
-                    value={step.studentActivity || ""}
-                    onChange={v => {
-                      const next = plan.presentation.map((s, j) =>
-                        j === i ? { ...s, studentActivity: v } : s
-                      );
-                      set("presentation", next);
-                    }}
-                    className="text-sm min-h-[2rem] w-full"
-                  />
-                </div>
-              </div>
+        {([
+          { label: "PDF Document", sub: "Formatted for printing and sharing", fmt: "pdf" as const },
+          { label: "Word Document", sub: "Editable DOCX format", fmt: "docx" as const },
+        ] as const).map((opt, i) => (
+          <button
+            key={opt.fmt}
+            onClick={() => onExport(opt.fmt)}
+            className="w-full flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50 text-left"
+            style={{ borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}
+          >
+            <div
+              className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "var(--color-primary-dim)" }}
+            >
+              <IconDownload className="w-5 h-5" style={{ color: "var(--color-primary)" }} />
             </div>
-          ))}
-        </div>
-      </DocSection>
-
-      <DocSection num="07" title="Evaluation Questions">
-        <EditableList items={plan.evaluation || []} onChange={v => set("evaluation", v)} numbered />
-      </DocSection>
-
-      <DocSection num="08" title="Summary">
-        <Rich
-          value={plan.summary || ""}
-          onChange={v => set("summary", v)}
-          placeholder="How will you wrap up the lesson?"
-          className="text-sm min-h-[3rem] w-full"
-        />
-      </DocSection>
-
-      <DocSection num="09" title="Assignment">
-        <Rich
-          value={plan.assignment || ""}
-          onChange={v => set("assignment", v)}
-          placeholder="What will students work on independently?"
-          className="text-sm min-h-[3rem] w-full"
-        />
-      </DocSection>
-    </div>
-  );
-}
-
-// ── Note Canvas ────────────────────────────────────────────────────────
-
-function NoteMetaRow({ note }: { note: LessonNote }) {
-  const m = note.header;
-  return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-6 pb-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-      <span><strong className="text-gray-600">Subject</strong> {m?.subject}</span>
-      <span><strong className="text-gray-600">Class</strong> {m?.classLevel}</span>
-      <span><strong className="text-gray-600">Term</strong> {m?.term}</span>
-      <span><strong className="text-gray-600">Week</strong> {m?.week}</span>
-      <span><strong className="text-gray-600">Duration</strong> {m?.duration}</span>
-    </div>
-  );
-}
-
-function NoteCanvas({ note, onChange }: { note: LessonNote; onChange: (n: LessonNote) => void }) {
-  const set = <K extends keyof LessonNote>(key: K, val: LessonNote[K]) =>
-    onChange({ ...note, [key]: val });
-
-  return (
-    <div className="text-[15px]">
-      <NoteMetaRow note={note} />
-
-      <DocSection num="01" title="Presentation">
-        <div className="space-y-5">
-          {(note.presentation || []).map((step, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(40% 0.22 290)" }}>
-                  Step {step.step}: {step.title}
-                </span>
-                <Rich
-                  value={step.duration || ""}
-                  onChange={v => {
-                    const next = note.presentation.map((s, j) => j === i ? { ...s, duration: v } : s);
-                    set("presentation", next);
-                  }}
-                  inline
-                  className="text-xs text-gray-400 text-right"
-                />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Teacher Narrative & Content</p>
-                  <Rich
-                    value={step.content || ""}
-                    onChange={v => {
-                      const next = note.presentation.map((s, j) => j === i ? { ...s, content: v } : s);
-                      set("presentation", next);
-                    }}
-                    placeholder="What to say and explain in this step…"
-                    className="text-sm min-h-[3rem] w-full"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DocSection>
-
-      <DocSection num="02" title="Subject Content">
-        <div className="space-y-5">
-          {(note.subjectContent || []).map((section, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-              <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: "oklch(40% 0.22 290)" }}>
-                {section.subTopic}
+            <div className="min-w-0">
+              <p className="text-[15px] font-semibold" style={{ color: "oklch(12% 0.01 290)" }}>
+                {opt.label}
               </p>
-
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Explanation</p>
-                  <Rich
-                    value={section.explanation || ""}
-                    onChange={v => {
-                      const next = note.subjectContent.map((s, j) => j === i ? { ...s, explanation: v } : s);
-                      set("subjectContent", next);
-                    }}
-                    placeholder="Explain this sub-topic…"
-                    className="text-sm min-h-[3rem] w-full"
-                  />
-                </div>
-
-                {(section.workedExamples || []).length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Worked Examples</p>
-                    <div className="space-y-2">
-                      {section.workedExamples.map((ex, k) => (
-                        <div key={k} className="rounded-lg p-3" style={{ background: "#F0F9FF", border: "1px solid #E0F2FE" }}>
-                          <p className="text-xs font-semibold text-blue-800 mb-1">{ex.problem}</p>
-                          <p className="text-xs text-blue-700 font-mono whitespace-pre-line leading-relaxed">{ex.solution}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {(section.keyPoints || []).length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Key Points</p>
-                    <div className="rounded-lg px-3 py-2 space-y-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-                      {section.keyPoints.map((line, k) => (
-                        <p key={k} className="text-xs text-gray-700 flex items-start gap-2">
-                          <span style={{ color: "oklch(40% 0.22 290)" }} className="font-bold shrink-0">→</span>
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+                {opt.sub}
+              </p>
             </div>
-          ))}
+          </button>
+        ))}
+
+        <div className="px-5 py-4">
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl text-[14px] font-semibold transition-colors"
+            style={{ background: "var(--color-surface)", color: "var(--color-text-muted)" }}
+          >
+            Cancel
+          </button>
         </div>
-      </DocSection>
-
-      <DocSection num="03" title="Board Summary">
-        <div className="rounded-lg px-4 py-3 space-y-2" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-          {(note.boardSummary || []).map((line, i) => (
-            <div key={i} className="text-sm text-gray-800 flex items-start gap-2">
-               <span className="mt-[2px]" style={{ color: "oklch(40% 0.22 290)" }}>•</span>
-               <Rich
-                 value={line}
-                 onChange={v => {
-                   const next = [...note.boardSummary];
-                   next[i] = v;
-                   set("boardSummary", next);
-                 }}
-                 inline
-                 className="w-full"
-               />
-            </div>
-          ))}
-        </div>
-      </DocSection>
-
-      <DocSection num="04" title="Evaluation">
-        <div className="space-y-3">
-          {(note.evaluation || []).map((qa, i) => (
-            <div key={i} className="rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Q{i + 1}</p>
-              <Rich
-                value={qa.question || ""}
-                onChange={v => {
-                  const next = note.evaluation.map((x, j) => j === i ? { ...x, question: v } : x);
-                  set("evaluation", next);
-                }}
-                className="text-sm text-gray-800 mb-3 w-full font-medium"
-              />
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Expected Answer</p>
-              <Rich
-                value={qa.expectedAnswer || ""}
-                onChange={v => {
-                  const next = note.evaluation.map((x, j) => j === i ? { ...x, expectedAnswer: v } : x);
-                  set("evaluation", next);
-                }}
-                className="text-sm text-gray-600 w-full"
-              />
-            </div>
-          ))}
-        </div>
-      </DocSection>
-
-      <DocSection num="05" title="Summary">
-        <Rich
-          value={note.summary || ""}
-          onChange={v => set("summary", v)}
-          placeholder="How does the lesson close?"
-          className="text-sm min-h-[3rem] w-full"
-        />
-      </DocSection>
-
-      <DocSection num="06" title="Assignment">
-        <EditableList items={note.assignment || []} onChange={v => set("assignment", v)} numbered />
-      </DocSection>
+        <div style={{ height: "env(safe-area-inset-bottom, 0px)" }} />
+      </div>
     </div>
   );
 }
 
-// ── Main Canvas Page ───────────────────────────────────────────────────
+// ─── Regenerate panel ─────────────────────────────────────────────────────────
+
+function RegeneratePanel({
+  phase,
+  onClose,
+  onConfirm,
+  isLoading,
+}: {
+  phase: "plan" | "note";
+  onClose: () => void;
+  onConfirm: (instructions: string) => void;
+  isLoading: boolean;
+}) {
+  const [instructions, setInstructions] = useState("");
+
+  return (
+    <div
+      className="px-4 py-4 shrink-0 animate-fade-up"
+      style={{ borderBottom: "1px solid var(--color-border)", background: "oklch(98.5% 0.002 290)" }}
+    >
+      <div className="lg:max-w-[880px] lg:mx-auto">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[13px] font-semibold" style={{ color: "oklch(12% 0.01 290)" }}>
+            Regenerate {phase === "plan" ? "lesson plan" : "lesson note"}
+            <span className="ml-1.5 font-normal" style={{ color: "var(--color-text-muted)" }}>· ₽5</span>
+          </p>
+          <button onClick={onClose} className="text-[18px] leading-none" style={{ color: "var(--color-text-muted)" }}>
+            ×
+          </button>
+        </div>
+        <textarea
+          value={instructions}
+          onChange={e => setInstructions(e.target.value)}
+          placeholder='Optional: "Make it simpler", "Add more worked examples"…'
+          className="w-full text-[14px] px-3 py-2.5 rounded-xl outline-none resize-none leading-relaxed"
+          style={{ border: "1px solid var(--color-border)", background: "white", color: "oklch(12% 0.01 290)" }}
+          rows={2}
+        />
+        <div className="flex gap-2 mt-2.5">
+          <button
+            onClick={() => onConfirm(instructions)}
+            disabled={isLoading}
+            className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white disabled:opacity-60 transition"
+            style={{ background: "var(--color-primary)" }}
+          >
+            {isLoading ? "Regenerating…" : "Regenerate — ₽5"}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl text-[13px] font-medium transition-colors"
+            style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main canvas page ─────────────────────────────────────────────────────────
 
 export default function CanvasPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: walletData } = useGetWalletQuery();
 
   const { data: noteData, isLoading } = useGetNoteQuery(id, { skip: !id });
+  const { data: walletData } = useGetWalletQuery();
   const [updateNote] = useUpdateNoteMutation();
   const [generateNote, { isLoading: generatingNote }] = useGenerateLessonNoteMutation();
   const [regenerate, { isLoading: regenerating }] = useRegenerateMutation();
@@ -576,23 +1048,73 @@ export default function CanvasPage() {
   const [lessonNote, setLessonNote] = useState<LessonNote | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [showMenu, setShowMenu] = useState(false);
-  const [showRegenerate, setShowRegenerate] = useState(false);
-  const [regenInstructions, setRegenInstructions] = useState("");
+  const [showRegen, setShowRegen] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+  const [editing, setEditing] = useState<{ label: string; key: EditKey } | null>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (note && !initialized.current) {
-      if (note.lessonPlanContent) setPlan(note.lessonPlanContent);
+      if (note.lessonPlanContent) setPlan(cleanPlan(note.lessonPlanContent));
       if (note.lessonNoteContent) {
-        setLessonNote(note.lessonNoteContent);
+        setLessonNote(cleanNote(note.lessonNoteContent));
         if (note.phase === "complete") setPhase("note");
       }
       initialized.current = true;
     }
   }, [note]);
 
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Close menu on outside click
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = () => setShowMenu(false);
+    setTimeout(() => document.addEventListener("click", handler), 0);
+    return () => document.removeEventListener("click", handler);
+  }, [showMenu]);
+
+  // Track which section is in view for the outline rail / chips
+  useEffect(() => {
+    const labels = phase === "plan" ? PLAN_SECTIONS : NOTE_SECTIONS;
+    const els = labels
+      .map(l => document.getElementById(slug(l)))
+      .filter((el): el is HTMLElement => !!el);
+    if (!els.length) return;
+    const obs = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting);
+        if (visible.length) setActiveSection(visible[0].target.id);
+      },
+      { rootMargin: "-15% 0px -75% 0px" },
+    );
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+    // Re-observe only when sections appear/disappear — not on every keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, !!plan, !!lessonNote, generatingNote]);
+
+  // Reading progress hairline — updates the DOM directly so scrolling never re-renders
+  useEffect(() => {
+    const onScroll = (e: Event) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement) || !progressRef.current) return;
+      if (!t.contains(progressRef.current)) return;
+      const max = t.scrollHeight - t.clientHeight;
+      progressRef.current.style.width = max > 40 ? `${(t.scrollTop / max) * 100}%` : "0%";
+    };
+    document.addEventListener("scroll", onScroll, true);
+    return () => document.removeEventListener("scroll", onScroll, true);
+  }, []);
+
+  // Keep the active section chip in view on mobile
+  useEffect(() => {
+    if (!activeSection) return;
+    document
+      .getElementById(`chip-${activeSection}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeSection]);
 
   const scheduleSave = useCallback(
     (field: "lessonPlanContent" | "lessonNoteContent", value: LessonPlan | LessonNote) => {
@@ -602,12 +1124,13 @@ export default function CanvasPage() {
         try {
           await updateNote({ noteId: id, [field]: value }).unwrap();
           setSaveStatus("saved");
+          setTimeout(() => setSaveStatus("idle"), 2000);
         } catch {
           setSaveStatus("idle");
         }
-      }, 1500);
+      }, 1200);
     },
-    [id, updateNote]
+    [id, updateNote],
   );
 
   function handlePlanChange(updated: LessonPlan) {
@@ -624,35 +1147,31 @@ export default function CanvasPage() {
     if (!plan) return;
     try {
       const res = await generateNote({ noteId: id, editedLessonPlan: plan }).unwrap();
-      setLessonNote(res.data.lessonNote);
+      setLessonNote(cleanNote(res.data.lessonNote));
       setPhase("note");
-    } catch {/* noop */}
+    } catch {/* surfaced via wallet/notes refetch */}
   }
 
-  async function handleRegenerate() {
+  async function handleRegenerate(instructions: string) {
     try {
       const res = await regenerate({
         noteId: id,
         phase,
-        additionalInstructions: regenInstructions || undefined,
+        additionalInstructions: instructions || undefined,
       }).unwrap();
-      if (phase === "plan") {
-        setPlan(res.data.content as LessonPlan);
-      } else {
-        setLessonNote(res.data.content as LessonNote);
-      }
-      setShowRegenerate(false);
-      setShowMenu(false);
-      setRegenInstructions("");
+      if (phase === "plan") setPlan(cleanPlan(res.data.content as LessonPlan));
+      else setLessonNote(cleanNote(res.data.content as LessonNote));
+      setShowRegen(false);
     } catch {/* noop */}
   }
 
   async function handleExport(format: "pdf" | "docx") {
+    setShowExport(false);
     try {
       const token = localStorage.getItem("sabi_access");
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/export/${id}/${format}`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}` } }
+        { method: "POST", headers: { Authorization: `Bearer ${token}` } },
       );
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -662,265 +1181,410 @@ export default function CanvasPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {/* noop */}
-    setShowExport(false);
   }
 
-  if (isLoading || !note) {
-    return (
-      <div className="flex flex-col min-h-full bg-white px-5 py-8 space-y-4">
-        <div className="animate-shimmer h-5 w-1/3 rounded-lg" />
-        <div className="animate-shimmer h-3 w-full rounded-lg" />
-        <div className="animate-shimmer h-3 w-5/6 rounded-lg" />
-        <div className="animate-shimmer h-3 w-4/6 rounded-lg" />
-        <div className="mt-6 animate-shimmer h-3 w-full rounded-lg" />
-        <div className="animate-shimmer h-3 w-5/6 rounded-lg" />
-      </div>
-    );
-  }
+  if (isLoading || !note) return <SkeletonDoc />;
 
   const balance = Number(walletData?.data?.balance ?? 0);
   const canGenerateNote = balance >= 12;
   const hasNote = !!lessonNote;
+  const metaHeader = plan?.metadata ?? (lessonNote?.header ?? null);
+
+  const openEditor = (label: string, key: EditKey) => setEditing({ label, key });
 
   return (
-    <div className="flex flex-col min-h-full bg-white">
-      <FormatToolbar />
-
-      {/* Top bar */}
-      <div
-        className="flex items-center gap-2 px-4 py-3 shrink-0 sticky top-0 z-10 bg-white"
+    <div className="flex flex-col min-h-full bg-white lg:bg-transparent">
+      {/* ── Sticky header ── */}
+      <header
+        className="flex items-center gap-2 px-4 h-12 shrink-0 sticky top-0 z-20 bg-white"
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
-        <Link href="/notes" className="w-8 h-8 flex items-center justify-center text-gray-400 rounded-lg hover:bg-gray-100 shrink-0">
+        {/* Reading progress hairline */}
+        <div
+          ref={progressRef}
+          className="absolute bottom-0 left-0 h-0.5 pointer-events-none"
+          style={{ background: "var(--color-primary)", width: 0, opacity: 0.85, transition: "width 80ms linear" }}
+        />
+
+        <Link
+          href="/notes"
+          aria-label="Back to library"
+          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors hover:bg-gray-100"
+          style={{ color: "var(--color-text-muted)" }}
+        >
           <IconBack />
         </Link>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{note.topic}</p>
-          <p className="text-[10px] text-gray-400 flex items-center gap-1.5 mt-0.5">
-            {saveStatus === "saving" && (
-              <><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" /> Saving…</>
-            )}
-            {saveStatus === "saved" && (
-              <><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Saved</>
-            )}
-            {saveStatus === "idle" && (
-              <><span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" /> Auto-save on</>
-            )}
-          </p>
+
+        <div className="flex-1 min-w-0 flex items-center justify-center">
+          <SaveDot status={saveStatus} />
         </div>
 
-        {/* Phase toggle pills */}
-        <div className="flex items-center p-0.5 rounded-lg shrink-0" style={{ background: "#F3F4F6" }}>
-          {(["plan", "note"] as const).map(p => (
-            <button
-              key={p}
-              onClick={() => { if (p === "note" && !hasNote) return; setPhase(p); }}
-              disabled={p === "note" && !hasNote}
-              className="px-3 py-1 rounded-md text-xs font-semibold transition-all disabled:opacity-30 capitalize"
-              style={
-                phase === p
-                  ? { background: "white", color: "oklch(40% 0.22 290)", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-                  : { color: "#6B7280" }
-              }
+        {/* Desktop actions */}
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
+          {phase === "plan" && !hasNote && !generatingNote && (
+            canGenerateNote ? (
+              <button
+                onClick={handleGenerateNote}
+                disabled={!plan}
+                className="h-9 px-4 rounded-xl text-[13px] font-semibold text-white flex items-center gap-1.5 disabled:opacity-40 transition"
+                style={{ background: "var(--color-primary)" }}
+              >
+                <IconBolt className="w-4 h-4" />
+                Generate Note · ₽12
+              </button>
+            ) : (
+              <Link
+                href="/wallet"
+                className="h-9 px-4 rounded-xl text-[13px] font-semibold flex items-center transition-colors"
+                style={{ border: "1px solid var(--color-border)", color: "var(--color-primary)" }}
+              >
+                Top up to generate · ₽12
+              </Link>
+            )
+          )}
+          {generatingNote && (
+            <div
+              className="h-9 px-4 rounded-xl text-[13px] font-semibold text-white flex items-center gap-2 opacity-80"
+              style={{ background: "var(--color-primary)" }}
             >
-              {p === "plan" ? "Plan" : "Note"}
+              <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" opacity="0.2" />
+                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+              </svg>
+              Writing note…
+            </div>
+          )}
+          {hasNote && !generatingNote && (
+            <button
+              onClick={() => setShowExport(true)}
+              className="h-9 px-4 rounded-xl text-[13px] font-semibold text-white flex items-center gap-1.5 transition"
+              style={{ background: "var(--color-primary)" }}
+            >
+              <IconDownload className="w-4 h-4" />
+              Export
             </button>
-          ))}
+          )}
         </div>
 
         {/* Menu */}
         <div className="relative shrink-0">
           <button
-            onClick={() => { setShowMenu(!showMenu); setShowExport(false); }}
-            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+            onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}
+            aria-label="More options"
+            aria-expanded={showMenu}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors hover:bg-gray-100"
+            style={{ color: "var(--color-text-muted)" }}
           >
             <IconDots />
           </button>
+
           {showMenu && (
             <div
-              className="absolute top-full right-0 mt-1 w-52 rounded-xl shadow-xl overflow-hidden"
+              className="absolute top-full right-0 mt-1.5 w-56 rounded-2xl overflow-hidden shadow-xl animate-scale-in"
               style={{ background: "white", border: "1px solid var(--color-border)", zIndex: 50 }}
+              onClick={e => e.stopPropagation()}
             >
               <button
-                onClick={() => { setShowRegenerate(true); setShowMenu(false); }}
-                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                onClick={() => { setShowRegen(true); setShowMenu(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50"
               >
-                <IconBolt className="w-3.5 h-3.5 shrink-0" style={{ color: "oklch(40% 0.22 290)" }} />
-                Regenerate {phase === "plan" ? "Plan" : "Note"} · ₽5
+                <IconBolt className="w-4 h-4 shrink-0" style={{ color: "var(--color-primary)" }} />
+                <div>
+                  <p className="text-[14px] font-medium" style={{ color: "oklch(12% 0.01 290)" }}>
+                    Regenerate {phase === "plan" ? "plan" : "note"}
+                  </p>
+                  <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>Costs ₽5</p>
+                </div>
               </button>
               {hasNote && (
                 <button
                   onClick={() => { setShowExport(true); setShowMenu(false); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50"
                   style={{ borderTop: "1px solid var(--color-border)" }}
                 >
-                  <IconDownload className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                  Export Material
+                  <IconDownload className="w-4 h-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+                  <p className="text-[14px] font-medium" style={{ color: "oklch(12% 0.01 290)" }}>
+                    Export material
+                  </p>
                 </button>
               )}
             </div>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Meta tags */}
+      {/* ── Phase tab strip + section chips ── */}
       <div
-        className="px-5 py-2 flex items-center gap-2 flex-wrap shrink-0 scrollbar-hidden overflow-x-auto"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
+        className="shrink-0 sticky z-10 bg-white"
+        style={{ top: 48, borderBottom: "1px solid var(--color-border)" }}
       >
-        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap" style={{ background: "var(--color-primary-dim)", color: "oklch(40% 0.22 290)" }}>
-          {note.subjectName}
-        </span>
-        <span className="text-xs text-gray-400 whitespace-nowrap">{note.classLevel}</span>
-        <span className="text-gray-200">·</span>
-        <span className="text-xs text-gray-400 whitespace-nowrap">Term {note.term} · Week {note.week}</span>
-        <span className="text-gray-200">·</span>
-        <span className="text-xs text-gray-400 whitespace-nowrap">{note.state}</span>
+        <div className="flex items-center px-5 lg:max-w-[880px] lg:mx-auto lg:px-8">
+          {(["plan", "note"] as const).map(p => (
+            <button
+              key={p}
+              onClick={() => { if (p === "note" && !hasNote) return; setEditing(null); setPhase(p); }}
+              disabled={p === "note" && !hasNote}
+              className="relative py-3 mr-6 text-[13px] font-semibold transition-colors disabled:opacity-30"
+              style={{ color: phase === p ? "var(--color-primary)" : "var(--color-text-muted)" }}
+            >
+              {p === "plan" ? "Lesson Plan" : "Lesson Note"}
+              {phase === p && (
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full"
+                  style={{ background: "var(--color-primary)" }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Section chips — mobile jump navigation */}
+        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto scrollbar-hidden px-5 pb-2.5">
+          {(phase === "plan" ? PLAN_SECTIONS : NOTE_SECTIONS).map(label => (
+            <button
+              key={label}
+              id={`chip-${slug(label)}`}
+              onClick={() =>
+                document.getElementById(slug(label))?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+              className="shrink-0 text-[11px] px-3 py-1.5 rounded-full whitespace-nowrap transition-colors"
+              style={activeSection === slug(label)
+                ? {
+                    background: "var(--color-primary-dim)",
+                    color: "var(--color-primary)",
+                    fontWeight: 600,
+                    border: "1px solid transparent",
+                  }
+                : {
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text-muted)",
+                    fontWeight: 500,
+                  }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Regenerate panel */}
-      {showRegenerate && (
-        <div className="px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
-          <p className="text-xs font-semibold text-gray-700 mb-2">
-            Regenerate {phase === "plan" ? "Lesson Plan" : "Lesson Note"} <span className="font-normal" style={{ color: "var(--color-text-muted)" }}>· costs ₽5</span>
-          </p>
-          <textarea
-            value={regenInstructions}
-            onChange={e => setRegenInstructions(e.target.value)}
-            placeholder={'Optional: add instructions (e.g. "make it simpler", "add more examples")'}
-            className="w-full text-sm px-3 py-2.5 rounded-xl outline-none resize-none bg-white leading-relaxed"
-            style={{ border: "1px solid var(--color-border)" }}
-            rows={2}
-          />
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={handleRegenerate}
-              disabled={regenerating}
-              className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
-              style={{ background: "oklch(40% 0.22 290)" }}
-            >
-              {regenerating ? "Regenerating…" : "Regenerate ₽5"}
-            </button>
-            <button
-              onClick={() => { setShowRegenerate(false); setRegenInstructions(""); }}
-              className="px-4 py-2.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-              style={{ border: "1px solid var(--color-border)" }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+      {/* ── Regenerate panel ── */}
+      {showRegen && (
+        <RegeneratePanel
+          phase={phase}
+          onClose={() => setShowRegen(false)}
+          onConfirm={handleRegenerate}
+          isLoading={regenerating}
+        />
       )}
 
-      {/* Canvas scrollable area */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-6 lg:px-10 lg:max-w-3xl lg:mx-auto lg:w-full">
-
-        {/* Plan view */}
-        {phase === "plan" && plan && (
-          <PlanCanvas plan={plan} onChange={handlePlanChange} />
-        )}
-        {phase === "plan" && !plan && (
-          <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-            <p className="text-gray-400 text-sm">No lesson plan content yet.</p>
-          </div>
-        )}
-
-        {/* Note view */}
-        {phase === "note" && !generatingNote && lessonNote && (
-          <NoteCanvas note={lessonNote} onChange={handleNoteChange} />
-        )}
-
-        {phase === "note" && generatingNote && (
-          <div className="space-y-3 py-4">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Generating Lesson Note…</p>
-            </div>
-            {[85, 100, 70, 95, 60, 100, 75, 88, 65, 90].map((w, i) => (
-              <div key={i} className="animate-shimmer h-3 rounded-lg" style={{ width: `${w}%` }} />
-            ))}
-          </div>
-        )}
-
-        {phase === "note" && !generatingNote && !lessonNote && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-gray-400 text-sm mb-3">Generate the Lesson Note from the Plan.</p>
-            <button onClick={() => setPhase("plan")} className="text-sm font-medium" style={{ color: "oklch(40% 0.22 290)" }}>
-              ← Back to Plan
-            </button>
-          </div>
-        )}
-
-        {/* Bottom spacer for sticky bar */}
-        <div className="h-24" />
-      </div>
-
-      {/* Export modal overlay */}
-      {showExport && (
-        <div
-          className="fixed inset-0 bg-black/20 z-40 flex items-end justify-center"
-          onClick={() => setShowExport(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-t-2xl overflow-hidden shadow-2xl mb-0"
-            style={{ background: "white" }}
-            onClick={e => e.stopPropagation()}
+      {/* ── Document workspace ── */}
+      <div className="flex-1">
+        <div className="lg:flex lg:items-start lg:justify-center lg:gap-10 lg:px-8">
+        <div className="canvas-sheet w-full min-w-0">
+        {/* Document header */}
+        <div className="px-5 pt-7 pb-1">
+          <h1
+            className="text-[26px] font-bold leading-tight font-display mb-3"
+            style={{ color: "oklch(10% 0.01 290)" }}
           >
-            <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
-              <p className="font-semibold text-gray-900">Export Material</p>
-              <p className="text-xs text-gray-400 mt-0.5">Download your lesson material</p>
+            {note.topic}
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span
+              className="text-[12px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "var(--color-primary-dim)", color: "var(--color-primary)" }}
+            >
+              {note.subjectName}
+            </span>
+            <span className="text-[12px]" style={{ color: "var(--color-text-muted)" }}>
+              {note.classLevel}
+            </span>
+            <span style={{ color: "var(--color-border)" }}>·</span>
+            <span className="text-[12px]" style={{ color: "var(--color-text-muted)" }}>
+              Term {note.term}, Week {note.week}
+            </span>
+            {note.state && (
+              <>
+                <span style={{ color: "var(--color-border)" }}>·</span>
+                <span className="text-[12px]" style={{ color: "var(--color-text-muted)" }}>
+                  {note.state}
+                </span>
+              </>
+            )}
+            {metaHeader?.duration && (
+              <>
+                <span style={{ color: "var(--color-border)" }}>·</span>
+                <span className="text-[12px]" style={{ color: "var(--color-text-muted)" }}>
+                  {metaHeader.duration} min
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Canvas content */}
+        <div key={phase} className="px-5 pb-4 animate-fade-up">
+          {phase === "plan" && plan && (
+            <div>
+              <Section label="Behavioural Objectives" noBorder onEdit={() => openEditor("Behavioural Objectives", "objectives")}>
+                <ObjectivesBlock obj={plan.objectives} />
+              </Section>
+              <Section label="Previous Knowledge" onEdit={() => openEditor("Previous Knowledge", "previousKnowledge")}>
+                <ProseBlock v={plan.previousKnowledge} />
+              </Section>
+              <Section label="Entry Behaviour" onEdit={() => openEditor("Entry Behaviour", "entryBehaviour")}>
+                <ProseBlock v={plan.entryBehaviour} />
+              </Section>
+              <Section label="Instructional Materials" onEdit={() => openEditor("Instructional Materials", "instructionalMaterials")}>
+                <ListBlock items={plan.instructionalMaterials} />
+              </Section>
+              <Section label="Reference Books" onEdit={() => openEditor("Reference Books", "referenceBooks")}>
+                <ListBlock items={plan.referenceBooks} />
+              </Section>
+              <Section label="Lesson Presentation" onEdit={() => openEditor("Lesson Presentation", "presentation")}>
+                <StepsBlock steps={plan.presentation} mode="plan" />
+              </Section>
+              <Section label="Evaluation Questions" onEdit={() => openEditor("Evaluation Questions", "evaluation")}>
+                <ListBlock items={plan.evaluation} numbered />
+              </Section>
+              <Section label="Lesson Summary" onEdit={() => openEditor("Lesson Summary", "summary")}>
+                <ProseBlock v={plan.summary} />
+              </Section>
+              <Section label="Assignment" onEdit={() => openEditor("Assignment", "assignment")}>
+                <ProseBlock v={plan.assignment} />
+              </Section>
             </div>
-            {[
-              { label: "Download as PDF", sub: "Best for printing", fmt: "pdf" as const },
-              { label: "Download as DOCX", sub: "Editable Word document", fmt: "docx" as const },
-            ].map((opt, i) => (
+          )}
+          {phase === "plan" && !plan && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-[14px]" style={{ color: "var(--color-text-muted)" }}>
+                No plan content yet.
+              </p>
+            </div>
+          )}
+
+          {phase === "note" && generatingNote && <GeneratingSkeleton />}
+          {phase === "note" && !generatingNote && lessonNote && (
+            <div>
+              <Section label="Objectives" noBorder onEdit={() => openEditor("Objectives", "objectives")}>
+                <ObjectivesBlock obj={lessonNote.objectives} />
+              </Section>
+              <Section label="Previous Knowledge" onEdit={() => openEditor("Previous Knowledge", "previousKnowledge")}>
+                <ProseBlock v={lessonNote.previousKnowledge} />
+              </Section>
+              <Section label="Entry Behaviour" onEdit={() => openEditor("Entry Behaviour", "entryBehaviour")}>
+                <ProseBlock v={lessonNote.entryBehaviour} />
+              </Section>
+              <Section label="Instructional Materials" onEdit={() => openEditor("Instructional Materials", "instructionalMaterials")}>
+                <ListBlock items={lessonNote.instructionalMaterials} />
+              </Section>
+              <Section label="Reference Books" onEdit={() => openEditor("Reference Books", "referenceBooks")}>
+                <ListBlock items={lessonNote.referenceBooks} />
+              </Section>
+              <Section label="Lesson Presentation" onEdit={() => openEditor("Lesson Presentation", "presentation")}>
+                <StepsBlock steps={lessonNote.presentation} mode="note" />
+              </Section>
+              <Section label="Subject Content" onEdit={() => openEditor("Subject Content", "subjectContent")}>
+                <SubjectContentBlock blocks={lessonNote.subjectContent} />
+              </Section>
+              <Section label="Board Summary" onEdit={() => openEditor("Board Summary", "boardSummary")}>
+                <ListBlock items={lessonNote.boardSummary} />
+              </Section>
+              <Section label="Evaluation Questions" onEdit={() => openEditor("Evaluation Questions", "evaluation")}>
+                <QABlock items={lessonNote.evaluation} />
+              </Section>
+              <Section label="Lesson Summary" onEdit={() => openEditor("Lesson Summary", "summary")}>
+                <ProseBlock v={lessonNote.summary} />
+              </Section>
+              <Section label="Assignment" onEdit={() => openEditor("Assignment", "assignment")}>
+                <ListBlock items={lessonNote.assignment} numbered />
+              </Section>
+            </div>
+          )}
+          {phase === "note" && !generatingNote && !lessonNote && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-[14px] mb-3" style={{ color: "var(--color-text-muted)" }}>
+                Ready to generate the full lesson note.
+              </p>
               <button
-                key={i}
-                onClick={() => handleExport(opt.fmt)}
-                className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-                style={{ borderTop: i > 0 ? "1px solid var(--color-border)" : undefined }}
+                onClick={() => setPhase("plan")}
+                className="text-[13px] font-semibold"
+                style={{ color: "var(--color-primary)" }}
               >
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: "var(--color-primary-dim)" }}
-                >
-                  <IconDownload className="w-4 h-4" style={{ color: "oklch(40% 0.22 290)" }} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
-                  <p className="text-xs text-gray-400">{opt.sub}</p>
-                </div>
+                ← Back to Plan
+              </button>
+            </div>
+          )}
+        </div>
+        </div>
+
+        {/* Outline rail — desktop only */}
+        <nav
+          className="hidden xl:block w-52 shrink-0 sticky"
+          style={{ top: 128, marginTop: 32 }}
+          aria-label="Document outline"
+        >
+          <p
+            className="text-[10px] font-bold uppercase tracking-widest mb-3 px-2.5"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            On this page
+          </p>
+          <div className="space-y-0.5">
+            {(phase === "plan" ? PLAN_SECTIONS : NOTE_SECTIONS).map(label => (
+              <button
+                key={label}
+                onClick={() =>
+                  document.getElementById(slug(label))?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                className="block w-full text-left text-[12px] py-1.5 px-2.5 rounded-lg transition-colors"
+                style={activeSection === slug(label)
+                  ? { color: "var(--color-primary)", background: "var(--color-primary-dim)", fontWeight: 600 }
+                  : { color: "var(--color-text-muted)" }}
+              >
+                {label}
               </button>
             ))}
-            <div className="h-safe-area-bottom" />
           </div>
+        </nav>
         </div>
-      )}
 
-      {/* Sticky bottom action bar */}
+        <div className="h-28 lg:h-10" />
+      </div>
+
+      {/* ── Sticky bottom action bar (mobile; desktop actions live in the header) ── */}
       <div
-        className="shrink-0 px-5 py-3 bg-white"
-        style={{ borderTop: "1px solid var(--color-border)" }}
+        className="shrink-0 px-4 pt-3 bg-white sticky bottom-0 z-20 lg:hidden"
+        style={{
+          borderTop: "1px solid var(--color-border)",
+          paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+        }}
       >
         {phase === "plan" && !hasNote && !generatingNote && (
           canGenerateNote ? (
             <button
               onClick={handleGenerateNote}
               disabled={!plan}
-              className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-40 transition"
-              style={{ background: "oklch(40% 0.22 290)" }}
+              className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2.5 disabled:opacity-40 transition"
+              style={{ background: "var(--color-primary)" }}
             >
               <IconBolt className="w-5 h-5" />
-              Generate Full Lesson Note
-              <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(255,255,255,0.2)" }}>
+              Generate Lesson Note
+              <span
+                className="text-[12px] font-bold px-2 py-0.5 rounded-full ml-0.5"
+                style={{ background: "rgba(255,255,255,0.2)" }}
+              >
                 ₽12
               </span>
             </button>
           ) : (
-            <div className="text-center py-1">
-              <p className="text-sm text-red-500 mb-1.5">Insufficient balance to generate Note.</p>
-              <Link href="/wallet" className="text-sm font-semibold" style={{ color: "oklch(40% 0.22 290)" }}>
-                Top Up Wallet →
+            <div className="text-center py-1.5">
+              <p className="text-[13px] mb-1.5" style={{ color: "var(--color-error)" }}>
+                Not enough Parats — need ₽12 to generate a note.
+              </p>
+              <Link href="/wallet" className="text-[13px] font-semibold" style={{ color: "var(--color-primary)" }}>
+                Top up wallet →
               </Link>
             </div>
           )
@@ -930,33 +1594,185 @@ export default function CanvasPage() {
           <button
             onClick={() => setPhase("note")}
             className="w-full py-4 rounded-2xl font-semibold text-white transition"
-            style={{ background: "oklch(40% 0.22 290)" }}
+            style={{ background: "var(--color-primary)" }}
           >
             View Lesson Note →
           </button>
         )}
 
         {generatingNote && (
-          <button disabled className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 opacity-70" style={{ background: "oklch(40% 0.22 290)" }}>
+          <button
+            disabled
+            className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2.5 opacity-80"
+            style={{ background: "var(--color-primary)" }}
+          >
             <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <circle cx="12" cy="12" r="10" opacity="0.2" />
               <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
             </svg>
-            Generating Lesson Note…
+            Writing your lesson note…
           </button>
         )}
 
         {phase === "note" && hasNote && !generatingNote && (
           <button
             onClick={() => setShowExport(true)}
-            className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 transition"
-            style={{ background: "oklch(40% 0.22 290)" }}
+            className="w-full py-4 rounded-2xl font-semibold text-white flex items-center justify-center gap-2.5 transition"
+            style={{ background: "var(--color-primary)" }}
           >
             <IconDownload className="w-5 h-5" />
             Export Material
           </button>
         )}
       </div>
+
+      {/* ── Focused section editor ── */}
+      {editing && phase === "plan" && plan && (
+        <EditorSheet title={editing.label} onClose={() => setEditing(null)}>
+          {editing.key === "objectives" && (
+            <ObjectivesEditor value={plan.objectives} onChange={v => handlePlanChange({ ...plan, objectives: v })} />
+          )}
+          {editing.key === "previousKnowledge" && (
+            <ProseEditor
+              value={plan.previousKnowledge}
+              onChange={v => handlePlanChange({ ...plan, previousKnowledge: v })}
+              placeholder="What have students already learned that connects to this topic?"
+            />
+          )}
+          {editing.key === "entryBehaviour" && (
+            <ProseEditor
+              value={plan.entryBehaviour}
+              onChange={v => handlePlanChange({ ...plan, entryBehaviour: v })}
+              placeholder="Prior knowledge students should have…"
+            />
+          )}
+          {editing.key === "instructionalMaterials" && (
+            <ListEditor
+              items={plan.instructionalMaterials}
+              onChange={v => handlePlanChange({ ...plan, instructionalMaterials: v })}
+              addLabel="Add material"
+            />
+          )}
+          {editing.key === "referenceBooks" && (
+            <ListEditor
+              items={plan.referenceBooks}
+              onChange={v => handlePlanChange({ ...plan, referenceBooks: v })}
+              addLabel="Add reference"
+            />
+          )}
+          {editing.key === "presentation" && (
+            <StepsEditor
+              steps={plan.presentation}
+              mode="plan"
+              onChange={v => handlePlanChange({ ...plan, presentation: v })}
+            />
+          )}
+          {editing.key === "evaluation" && (
+            <ListEditor
+              items={plan.evaluation}
+              onChange={v => handlePlanChange({ ...plan, evaluation: v })}
+              numbered
+              addLabel="Add question"
+            />
+          )}
+          {editing.key === "summary" && (
+            <ProseEditor
+              value={plan.summary}
+              onChange={v => handlePlanChange({ ...plan, summary: v })}
+              placeholder="How will you close the lesson?"
+            />
+          )}
+          {editing.key === "assignment" && (
+            <ProseEditor
+              value={plan.assignment}
+              onChange={v => handlePlanChange({ ...plan, assignment: v })}
+              placeholder="What will students work on independently?"
+            />
+          )}
+        </EditorSheet>
+      )}
+
+      {editing && phase === "note" && lessonNote && (
+        <EditorSheet title={editing.label} onClose={() => setEditing(null)}>
+          {editing.key === "objectives" && (
+            <ObjectivesEditor value={lessonNote.objectives} onChange={v => handleNoteChange({ ...lessonNote, objectives: v })} />
+          )}
+          {editing.key === "previousKnowledge" && (
+            <ProseEditor
+              value={lessonNote.previousKnowledge}
+              onChange={v => handleNoteChange({ ...lessonNote, previousKnowledge: v })}
+              placeholder="Prior knowledge students bring…"
+            />
+          )}
+          {editing.key === "entryBehaviour" && (
+            <ProseEditor
+              value={lessonNote.entryBehaviour}
+              onChange={v => handleNoteChange({ ...lessonNote, entryBehaviour: v })}
+              placeholder="Entry behaviour expected…"
+            />
+          )}
+          {editing.key === "instructionalMaterials" && (
+            <ListEditor
+              items={lessonNote.instructionalMaterials}
+              onChange={v => handleNoteChange({ ...lessonNote, instructionalMaterials: v })}
+              addLabel="Add material"
+            />
+          )}
+          {editing.key === "referenceBooks" && (
+            <ListEditor
+              items={lessonNote.referenceBooks}
+              onChange={v => handleNoteChange({ ...lessonNote, referenceBooks: v })}
+              addLabel="Add reference"
+            />
+          )}
+          {editing.key === "presentation" && (
+            <StepsEditor
+              steps={lessonNote.presentation}
+              mode="note"
+              onChange={v => handleNoteChange({ ...lessonNote, presentation: v })}
+            />
+          )}
+          {editing.key === "subjectContent" && (
+            <SubjectContentEditor
+              blocks={lessonNote.subjectContent}
+              onChange={v => handleNoteChange({ ...lessonNote, subjectContent: v })}
+            />
+          )}
+          {editing.key === "boardSummary" && (
+            <ListEditor
+              items={lessonNote.boardSummary}
+              onChange={v => handleNoteChange({ ...lessonNote, boardSummary: v })}
+              addLabel="Add point"
+            />
+          )}
+          {editing.key === "evaluation" && (
+            <QAEditor
+              items={lessonNote.evaluation}
+              onChange={v => handleNoteChange({ ...lessonNote, evaluation: v })}
+            />
+          )}
+          {editing.key === "summary" && (
+            <ProseEditor
+              value={lessonNote.summary}
+              onChange={v => handleNoteChange({ ...lessonNote, summary: v })}
+              placeholder="How the lesson closes…"
+            />
+          )}
+          {editing.key === "assignment" && (
+            <ListEditor
+              items={lessonNote.assignment}
+              onChange={v => handleNoteChange({ ...lessonNote, assignment: v })}
+              numbered
+              addLabel="Add task"
+            />
+          )}
+        </EditorSheet>
+      )}
+
+      {/* ── Export sheet ── */}
+      {showExport && (
+        <ExportSheet onClose={() => setShowExport(false)} onExport={handleExport} />
+      )}
     </div>
   );
 }

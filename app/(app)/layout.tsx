@@ -134,6 +134,7 @@ function DesktopSidebar({
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router          = useRouter()
+  const pathname        = usePathname()
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
   const user            = useAppSelector(selectCurrentUser)
   const isAdmin         = user?.role === 'admin'
@@ -148,6 +149,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!mounted || !isAuthenticated) return null
 
+  // The note canvas manages its own document layout — give it the full main area
+  const isCanvas = /^\/notes\/[^/]+/.test(pathname)
+
   return (
     <div className="min-h-screen" style={{ background: "var(--color-surface)" }}>
 
@@ -155,15 +159,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="hidden lg:flex h-screen overflow-hidden">
         <DesktopSidebar user={user} isAdmin={isAdmin} />
         <main className="flex-1 overflow-y-auto" style={{ background: "var(--color-surface)" }}>
-          <div className="max-w-3xl mx-auto px-8 py-8">{children}</div>
+          {isCanvas ? children : <div className="max-w-3xl mx-auto px-8 py-8">{children}</div>}
         </main>
       </div>
 
       {/* Mobile layout */}
-      <div className="lg:hidden flex items-center justify-center min-h-screen" style={{ background: "oklch(15% 0.02 290)" }}>
-        <div className="app-screen shadow-2xl">
+      <div className="app-mobile-outer flex items-center justify-center lg:hidden">
+        <div className="app-screen">
           <div className="flex-1 overflow-y-auto scrollbar-hidden">{children}</div>
-          <TabBar />
+          {!isCanvas && <TabBar />}
         </div>
       </div>
     </div>

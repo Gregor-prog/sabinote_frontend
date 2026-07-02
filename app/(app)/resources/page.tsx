@@ -280,7 +280,7 @@ function UploadForm({ onSuccess }: { onSuccess: () => void }) {
         type="submit"
         disabled={isLoading || !file}
         className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ background: 'linear-gradient(135deg,#7C3AED,#641BC4)' }}
+        style={{ background: 'var(--color-primary)' }}
       >
         {isLoading ? 'Uploading…' : 'Upload Resource'}
       </button>
@@ -331,7 +331,7 @@ export default function ResourcesPage() {
         <button
           onClick={() => setShowUploadForm((v) => !v)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white transition-all"
-          style={{ background: 'linear-gradient(135deg,#7C3AED,#641BC4)' }}
+          style={{ background: 'var(--color-primary)' }}
         >
           <IconUpload className="w-4 h-4" />
           {showUploadForm ? 'Cancel Upload' : 'Upload New Resource'}

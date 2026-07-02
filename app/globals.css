@@ -214,11 +214,61 @@ body {
   display: flex;
   flex-direction: column;
   height: 100dvh;
+  height: 100vh; /* fallback for browsers that don't support dvh */
+  height: 100dvh;
+  width: 100%;
   max-width: 430px;
   margin: 0 auto;
-  background: #FAFAFA;
+  background: var(--color-surface);
   position: relative;
   overflow: hidden;
+}
+
+/* Outer mobile wrapper — surface bg on phones, dark frame on wider screens.
+   No `display` here: it would override Tailwind's lg:hidden (unlayered CSS
+   beats layered utilities), leaking this block into the desktop layout. */
+.app-mobile-outer {
+  min-height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-surface);
+}
+
+/* Dark "phone frame" effect only when the viewport is wide enough to see it */
+@media (min-width: 431px) {
+  .app-mobile-outer {
+    background: oklch(15% 0.02 290);
+  }
+  .app-screen {
+    box-shadow: 0 32px 80px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  }
+}
+
+/* Tappable read-only sections on the note canvas */
+.section-tap {
+  cursor: pointer;
+  transition: background 150ms var(--ease-out);
+}
+.section-tap:active {
+  background: oklch(40% 0.22 290 / 0.04);
+}
+@media (hover: hover) and (pointer: fine) {
+  .section-tap:hover {
+    background: oklch(40% 0.22 290 / 0.03);
+  }
+}
+
+/* Desktop canvas sheet — document-on-desk framing for the note editor */
+@media (min-width: 1024px) {
+  .canvas-sheet {
+    max-width: 800px;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 24px;
+    box-shadow: 0 1px 2px rgba(15, 10, 30, 0.04), 0 16px 48px -16px rgba(15, 10, 30, 0.1);
+    padding: 24px 40px 48px;
+    margin: 32px 0;
+  }
 }
 
 /* ── Landing page specific ── */

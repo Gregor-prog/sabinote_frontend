@@ -2,14 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { useParams } from "next/navigation";
+import { useDispatch } from "react-redux";
 import Link from "next/link";
 import { IconBack, IconDots, IconBolt, IconDownload } from "@/components/icons";
 import { useGetNoteQuery, useUpdateNoteMutation } from "@/lib/services/notesApi";
-import {
-  useGenerateLessonNoteMutation,
-  useRegenerateMutation,
-} from "@/lib/services/generateApi";
+import { useRegenerateMutation } from "@/lib/services/generateApi";
 import { useGetWalletQuery } from "@/lib/services/walletApi";
+import { baseApi } from "@/lib/services/baseApi";
 import type { LessonPlan, LessonNote, LessonPlanObjectives } from "@/lib/types";
 
 // ─── Plain-text hygiene ───────────────────────────────────────────────────────
@@ -111,6 +110,32 @@ type EditKey =
   | "instructionalMaterials" | "referenceBooks" | "presentation"
   | "evaluation" | "summary" | "assignment"
   | "subjectContent" | "boardSummary";
+
+// ─── Streaming progress labels ────────────────────────────────────────────────
+// The note JSON streams in key order; we detect the furthest-along top-level key
+// present in the accumulated raw text and show a friendly label. Cheap + robust
+// (substring checks only — no partial-JSON parsing).
+
+const PHASE_MARKERS: [marker: string, label: string][] = [
+  ['"assignment"', "Finishing up…"],
+  ['"summary"', "Writing the lesson summary…"],
+  ['"evaluation"', "Creating evaluation questions…"],
+  ['"boardSummary"', "Preparing the board summary…"],
+  ['"differentiation"', "Adding differentiation…"],
+  ['"commonMisconceptions"', "Noting common misconceptions…"],
+  ['"subjectContent"', "Writing content & worked examples…"],
+  ['"presentation"', "Building the lesson presentation…"],
+  ['"objectives"', "Setting the objectives…"],
+  ['"entryBehaviour"', "Establishing entry behaviour…"],
+  ['"referenceBooks"', "Gathering reference materials…"],
+];
+
+function phaseForRaw(raw: string): string {
+  for (const [marker, label] of PHASE_MARKERS) {
+    if (raw.includes(marker)) return label;
+  }
+  return "Writing your lesson note…";
+}
 
 // ─── Small shared pieces ──────────────────────────────────────────────────────
 
@@ -873,13 +898,13 @@ function SkeletonDoc() {
   );
 }
 
-function GeneratingSkeleton() {
+function GeneratingSkeleton({ label }: { label?: string }) {
   return (
     <div className="pt-4 pb-10 animate-fade-up">
       <div className="flex items-center gap-2.5 mb-8">
         <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--color-primary)" }} />
         <p className="text-[13px] font-semibold" style={{ color: "var(--color-primary)" }}>
-          Writing your lesson note…
+          {label || "Writing your lesson note…"}
         </p>
       </div>
       <div className="space-y-3">
@@ -1038,8 +1063,14 @@ export default function CanvasPage() {
   const { data: noteData, isLoading } = useGetNoteQuery(id, { skip: !id });
   const { data: walletData } = useGetWalletQuery();
   const [updateNote] = useUpdateNoteMutation();
-  const [generateNote, { isLoading: generatingNote }] = useGenerateLessonNoteMutation();
   const [regenerate, { isLoading: regenerating }] = useRegenerateMutation();
+  const dispatch = useDispatch();
+
+  // Note generation is streamed (SSE) rather than a blocking mutation, so its
+  // loading + progress state is managed locally.
+  const [generatingNote, setGeneratingNote] = useState(false);
+  const [streamPhase, setStreamPhase] = useState("");
+  const [genError, setGenError] = useState(false);
 
   const note = noteData?.data;
 
@@ -1144,12 +1175,82 @@ export default function CanvasPage() {
   }
 
   async function handleGenerateNote() {
-    if (!plan) return;
+    if (!plan || generatingNote) return;
+
+    // Jump to the note tab so the live progress skeleton is visible immediately.
+    setGenError(false);
+    setGeneratingNote(true);
+    setStreamPhase("Starting…");
+    setPhase("note");
+
+    let raw = "";
+    let receivedNote: LessonNote | null = null;
+
     try {
-      const res = await generateNote({ noteId: id, editedLessonPlan: plan }).unwrap();
-      setLessonNote(cleanNote(res.data.lessonNote));
-      setPhase("note");
-    } catch {/* surfaced via wallet/notes refetch */}
+      const token = localStorage.getItem("sabi_access");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/generate/lesson-note/stream`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ noteId: id, editedLessonPlan: plan }),
+        },
+      );
+
+      // Pre-check failures (balance, ownership…) come back as a normal JSON error.
+      if (!res.ok || !res.body) throw new Error("Generation could not start");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamErr = false;
+
+      // Parse the SSE frames as they arrive.
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const frames = buffer.split("\n\n");
+        buffer = frames.pop() ?? ""; // keep the trailing partial frame buffered
+
+        for (const frame of frames) {
+          let event = "message";
+          let data = "";
+          for (const line of frame.split("\n")) {
+            if (line.startsWith("event:")) event = line.slice(6).trim();
+            else if (line.startsWith("data:")) data += line.slice(5).trim();
+          }
+          if (!data) continue; // keepalive comment / empty
+
+          if (event === "token") {
+            raw += JSON.parse(data).t ?? "";
+            setStreamPhase(phaseForRaw(raw));
+          } else if (event === "done") {
+            receivedNote = JSON.parse(data).lessonNote as LessonNote;
+          } else if (event === "error") {
+            streamErr = true;
+          }
+        }
+      }
+
+      if (streamErr || !receivedNote) throw new Error("Generation failed");
+
+      setLessonNote(cleanNote(receivedNote));
+      // Refresh balance, transactions, and the notes list (the stream did the
+      // server-side write directly, bypassing RTK Query's auto-invalidation).
+      dispatch(
+        baseApi.util.invalidateTags(["Wallet", "Transactions", "Notes"]),
+      );
+    } catch {
+      setGenError(true);
+    } finally {
+      setGeneratingNote(false);
+      setStreamPhase("");
+    }
   }
 
   async function handleRegenerate(instructions: string) {
@@ -1464,7 +1565,7 @@ export default function CanvasPage() {
             </div>
           )}
 
-          {phase === "note" && generatingNote && <GeneratingSkeleton />}
+          {phase === "note" && generatingNote && <GeneratingSkeleton label={streamPhase} />}
           {phase === "note" && !generatingNote && lessonNote && (
             <div>
               <Section label="Objectives" noBorder onEdit={() => openEditor("Objectives", "objectives")}>
@@ -1504,16 +1605,43 @@ export default function CanvasPage() {
           )}
           {phase === "note" && !generatingNote && !lessonNote && (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <p className="text-[14px] mb-3" style={{ color: "var(--color-text-muted)" }}>
-                Ready to generate the full lesson note.
-              </p>
-              <button
-                onClick={() => setPhase("plan")}
-                className="text-[13px] font-semibold"
-                style={{ color: "var(--color-primary)" }}
-              >
-                ← Back to Plan
-              </button>
+              {genError ? (
+                <>
+                  <p className="text-[14px] mb-1 font-semibold" style={{ color: "var(--color-error)" }}>
+                    Generation didn&apos;t complete
+                  </p>
+                  <p className="text-[13px] mb-4" style={{ color: "var(--color-text-muted)" }}>
+                    No Parats were deducted. Please try again.
+                  </p>
+                  <button
+                    onClick={handleGenerateNote}
+                    className="h-10 px-5 rounded-xl text-[13px] font-semibold text-white transition"
+                    style={{ background: "var(--color-primary)" }}
+                  >
+                    Try again · ₽12
+                  </button>
+                  <button
+                    onClick={() => { setGenError(false); setPhase("plan"); }}
+                    className="text-[13px] font-semibold mt-3"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    ← Back to Plan
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-[14px] mb-3" style={{ color: "var(--color-text-muted)" }}>
+                    Ready to generate the full lesson note.
+                  </p>
+                  <button
+                    onClick={() => setPhase("plan")}
+                    className="text-[13px] font-semibold"
+                    style={{ color: "var(--color-primary)" }}
+                  >
+                    ← Back to Plan
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

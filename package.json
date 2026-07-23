@@ -6,7 +6,8 @@
     "dev": "next dev --webpack --port 3000",
     "build": "next build --webpack",
     "start": "next start --webpack",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seo:audit": "node scripts/seo-audit.mjs"
   },
   "dependencies": {
     "@paystack/inline-js": "^2.23.1",

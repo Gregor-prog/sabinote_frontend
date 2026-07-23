@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import StoreProvider from "@/lib/StoreProvider";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo/config";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -22,9 +23,34 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SabiNote — AI Lesson Notes for Nigerian Educators",
-  description:
-    "Generate NERDC-compliant, curriculum-aligned lesson notes in seconds. Built for Nigerian teachers.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — AI Lesson Notes for Nigerian Educators`,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — AI Lesson Notes for Nigerian Educators`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — AI Lesson Notes for Nigerian Educators`,
+    description: SITE_DESCRIPTION,
+  },
+};
+
+export const viewport: Viewport = {
   themeColor: "#F7F6FA",
 };
 

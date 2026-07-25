@@ -6,11 +6,10 @@ import {
   useGetPackagesQuery,
   useGetWalletQuery,
   useGetTransactionsQuery,
-  useInitiateTopupMutation,
-  useVerifyTopupMutation,
+  useManualTopupMutation,
 } from "@/lib/services/walletApi";
 
-type PayState = "idle" | "opening" | "verifying" | "success" | "failed";
+type PayState = "idle" | "submitting" | "success" | "failed";
 
 const PACKAGE_META: Record<
   string,
@@ -29,11 +28,20 @@ export default function WalletPage() {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [payState, setPayState] = useState<PayState>("idle");
 
-  const { data: pkgData } = useGetPackagesQuery();
-  const { data: walletData, refetch: refetchWallet } = useGetWalletQuery();
-  const { data: txData, refetch: refetchTx } = useGetTransactionsQuery({ limit: 20 });
-  const [initiateTopup] = useInitiateTopupMutation();
-  const [verifyTopup] = useVerifyTopupMutation();
+  const { data: pkgData, isLoading: packagesLoading, isError: packagesError } = useGetPackagesQuery();
+  const {
+    data: walletData,
+    isLoading: walletLoading,
+    isError: walletError,
+    refetch: refetchWallet,
+  } = useGetWalletQuery();
+  const {
+    data: txData,
+    isLoading: txLoading,
+    isError: txError,
+    refetch: refetchTx,
+  } = useGetTransactionsQuery({ limit: 20 });
+  const [manualTopup] = useManualTopupMutation();
 
   const packages = pkgData?.data?.packages ?? [];
   const balance = walletData?.data?.balance ?? "0";
@@ -47,39 +55,21 @@ export default function WalletPage() {
     return () => clearTimeout(t);
   }, [payState]);
 
+  // TEMPORARY — Paystack is disabled, top-ups credit for free via the
+  // backend's temporary /wallet/topup/manual endpoint. Swap back to the
+  // initiate/Paystack-popup/verify flow once payments are re-enabled.
   async function handlePurchase() {
     if (selectedIdx === null) return;
     const pkg = packages[selectedIdx];
-    setPayState("opening");
+    setPayState("submitting");
     try {
-      const res = await initiateTopup({ packageId: pkg.id }).unwrap();
-      const { email, reference } = res.data;
-
-      const PaystackPop = (await import("@paystack/inline-js")).default;
-      const popup = new PaystackPop();
-      popup.newTransaction({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "",
-        email,
-        amount: pkg.priceNGN * 100, // kobo
-        reference,
-        currency: "NGN",
-        onCancel: () => setPayState("idle"),
-        onError: () => setPayState("idle"),
-        onSuccess: (transaction: { reference: string }) => {
-          setPayState("verifying");
-          verifyTopup({ reference: transaction.reference })
-            .unwrap()
-            .then(() => {
-              setPayState("success");
-              refetchWallet();
-              refetchTx();
-              setSelectedIdx(null);
-            })
-            .catch(() => setPayState("failed"));
-        },
-      });
+      await manualTopup({ packageId: pkg.id }).unwrap();
+      setPayState("success");
+      refetchWallet();
+      refetchTx();
+      setSelectedIdx(null);
     } catch {
-      setPayState("idle");
+      setPayState("failed");
     }
   }
 
@@ -121,37 +111,65 @@ export default function WalletPage() {
               >
                 Available
               </p>
-              <p
-                className="font-display font-bold leading-none"
-                style={{
-                  fontSize: "3.25rem",
-                  letterSpacing: "-0.04em",
-                  color: "oklch(40% 0.22 290)",
-                }}
-              >
-                ₽{balance}
-              </p>
+              {walletLoading ? (
+                <div
+                  className="rounded-lg animate-pulse"
+                  style={{
+                    width: "8rem",
+                    height: "3.25rem",
+                    background: "var(--color-border)",
+                  }}
+                />
+              ) : walletError ? (
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: "#DC2626" }}
+                >
+                  Couldn&apos;t load balance
+                </p>
+              ) : (
+                <p
+                  className="font-display font-bold leading-none"
+                  style={{
+                    fontSize: "3.25rem",
+                    letterSpacing: "-0.04em",
+                    color: "oklch(40% 0.22 290)",
+                  }}
+                >
+                  ₽{balance}
+                </p>
+              )}
             </div>
             <div className="text-right pb-1">
-              <p
-                className="text-xs font-medium"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {estimatedLessons > 0 ? (
-                  <>
-                    {estimatedLessons} lesson{estimatedLessons !== 1 ? "s" : ""}
-                    <br />
-                    remaining
-                  </>
-                ) : (
-                  "Top up to start"
-                )}
-              </p>
+              {walletError ? (
+                <button
+                  onClick={() => refetchWallet()}
+                  className="text-xs font-semibold"
+                  style={{ color: "oklch(40% 0.22 290)" }}
+                >
+                  Retry
+                </button>
+              ) : (
+                <p
+                  className="text-xs font-medium"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  {estimatedLessons > 0 ? (
+                    <>
+                      {estimatedLessons} lesson{estimatedLessons !== 1 ? "s" : ""}
+                      <br />
+                      remaining
+                    </>
+                  ) : (
+                    "Top up to start"
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Usage bar */}
-          {Number(balance) > 0 && (
+          {!walletLoading && !walletError && Number(balance) > 0 && (
             <div className="mt-4">
               <div
                 className="h-1 rounded-full overflow-hidden"
@@ -186,7 +204,7 @@ export default function WalletPage() {
           Top up
         </h2>
 
-        <div className="space-y-2.5">
+        <div className="space-y-2.5" role="radiogroup" aria-label="Top-up package">
           {packages.map((pkg, i) => {
             const meta = PACKAGE_META[pkg.id] ?? {
               label: pkg.id,
@@ -196,6 +214,8 @@ export default function WalletPage() {
             return (
               <button
                 key={pkg.id}
+                role="radio"
+                aria-checked={selected}
                 onClick={() => setSelectedIdx(selected ? null : i)}
                 className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left relative"
                 style={
@@ -288,7 +308,20 @@ export default function WalletPage() {
             );
           })}
 
-          {packages.length === 0 && (
+          {packagesLoading &&
+            [0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-18 rounded-2xl animate-pulse"
+                style={{
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-border)",
+                  opacity: 0.5,
+                }}
+              />
+            ))}
+
+          {!packagesLoading && packagesError && (
             <div
               className="rounded-2xl p-6 text-center"
               style={{
@@ -297,66 +330,62 @@ export default function WalletPage() {
               }}
             >
               <p
-                className="text-sm"
+                className="text-sm mb-2"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                Loading packages...
+                Couldn&apos;t load packages.
               </p>
+              <button
+                className="text-xs font-semibold"
+                style={{ color: "oklch(40% 0.22 290)" }}
+              >
+                Retry
+              </button>
             </div>
           )}
         </div>
 
-        <button
-          onClick={handlePurchase}
-          disabled={
-            selectedIdx === null ||
-            payState === "opening" ||
-            payState === "verifying" ||
-            packages.length === 0
-          }
-          className="w-full py-4 mt-4 rounded-2xl font-semibold text-sm text-white disabled:opacity-40"
-          style={{ background: "oklch(40% 0.22 290)" }}
-        >
-          {payState === "opening"
-            ? "Opening secure checkout…"
-            : payState === "verifying"
-              ? "Confirming payment…"
-              : selectedIdx !== null
-                ? `Pay ₦${packages[selectedIdx].priceNGN.toLocaleString()}`
-                : "Select a package"}
-        </button>
-
-        {payState === "success" && (
-          <p
-            className="text-center text-xs font-semibold mt-2.5 flex items-center justify-center gap-1.5"
-            style={{ color: "#059669" }}
+        <div aria-live="polite">
+          <button
+            onClick={handlePurchase}
+            disabled={
+              selectedIdx === null ||
+              payState === "submitting" ||
+              packages.length === 0
+            }
+            className="w-full py-4 mt-4 rounded-2xl font-semibold text-sm text-white disabled:opacity-40"
+            style={{ background: "oklch(40% 0.22 290)" }}
           >
-            <IconCheck className="w-3 h-3" />
-            Payment confirmed — Parats added to your wallet
-          </p>
-        )}
-        {payState === "failed" && (
-          <p className="text-center text-xs mt-2.5" style={{ color: "#DC2626" }}>
-            Couldn&apos;t confirm payment yet. If money left your account, it will
-            credit automatically within a few minutes.
-          </p>
-        )}
+            {payState === "submitting"
+              ? "Adding Parats…"
+              : selectedIdx !== null
+                ? `Add ${packages[selectedIdx].parats} Parats — free for now`
+                : "Select a package"}
+          </button>
+
+          {payState === "success" && (
+            <p
+              className="text-center text-xs font-semibold mt-2.5 flex items-center justify-center gap-1.5"
+              style={{ color: "#059669" }}
+            >
+              <span aria-hidden="true">
+                <IconCheck className="w-3 h-3" />
+              </span>
+              Parats added to your wallet
+            </p>
+          )}
+          {payState === "failed" && (
+            <p className="text-center text-xs mt-2.5" style={{ color: "#DC2626" }}>
+              Something went wrong. Try again.
+            </p>
+          )}
+        </div>
 
         <p
-          className="text-center text-xs mt-2 flex items-center justify-center gap-1.5"
+          className="text-center text-xs mt-2"
           style={{ color: "var(--color-text-muted)" }}
         >
-          <svg
-            width="11"
-            height="11"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          Secured by Paystack
+          Free during launch — no payment required.
         </p>
       </div>
 
@@ -369,7 +398,36 @@ export default function WalletPage() {
           History
         </h2>
 
-        {transactions.length === 0 ? (
+        {txLoading ? (
+          <div className="space-y-2.5">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-14 rounded-2xl animate-pulse"
+                style={{ background: "var(--color-border)", opacity: 0.5 }}
+              />
+            ))}
+          </div>
+        ) : txError ? (
+          <div
+            className="rounded-2xl p-6 text-center"
+            style={{
+              border: "1px solid var(--color-border)",
+              background: "white",
+            }}
+          >
+            <p className="text-sm mb-2" style={{ color: "var(--color-text-muted)" }}>
+              Couldn&apos;t load history.
+            </p>
+            <button
+              onClick={() => refetchTx()}
+              className="text-xs font-semibold"
+              style={{ color: "oklch(40% 0.22 290)" }}
+            >
+              Retry
+            </button>
+          </div>
+        ) : transactions.length === 0 ? (
           <div
             className="rounded-2xl p-6 text-center"
             style={{
@@ -404,6 +462,7 @@ export default function WalletPage() {
                       ? { background: "#ECFDF5", color: "#059669" }
                       : { background: "#FEF2F2", color: "#DC2626" }
                   }
+                  aria-hidden="true"
                 >
                   {tx.type === "credit" ? "+" : "−"}
                 </div>

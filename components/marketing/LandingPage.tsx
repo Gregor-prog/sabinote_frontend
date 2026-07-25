@@ -19,7 +19,7 @@ function BrandMark({ height = 32 }: { height?: number }) {
 /* ── Arrow icon ─────────────────────────────────────────────────── */
 function ArrowRight({ size = 14 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <path
         d="M3 7h8m0 0L8 4m3 3-3 3"
         stroke="currentColor"
@@ -28,6 +28,34 @@ function ArrowRight({ size = 14 }: { size?: number }) {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+/* ── Section eyebrow ────────────────────────────────────────────────
+   A running index + rule line replaces the pill-badge kicker as the
+   section-to-section grammar. Ties into the 01/02/03 step numbering
+   already used further down the page, so it reads as one system
+   rather than a repeated badge component. ── */
+function SectionEyebrow({
+  index,
+  dark = false,
+}: {
+  index: string;
+  dark?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-4 mb-5" aria-hidden="true">
+      <span
+        className="font-mono text-xs tracking-wide"
+        style={{ color: dark ? "rgba(255,255,255,0.3)" : "#C7C2D6" }}
+      >
+        {index}
+      </span>
+      <span
+        className="h-px flex-1 max-w-16"
+        style={{ background: dark ? "rgba(255,255,255,0.12)" : "#E5E7EB" }}
+      />
+    </div>
   );
 }
 
@@ -566,7 +594,13 @@ export default function LandingPage() {
                   }}
                 >
                   Start generating for free
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden="true"
+                  >
                     <path
                       d="M3 8h10m0 0L9 4m4 4-4 4"
                       stroke="currentColor"
@@ -581,7 +615,13 @@ export default function LandingPage() {
                   className="flex items-center gap-2 font-semibold px-5 py-3 rounded-xl transition-all hover:bg-gray-50"
                   style={{ border: "1.5px solid #E5E7EB", color: "#374151" }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    aria-hidden="true"
+                  >
                     <path d="M4 3v8l7-4-7-4Z" fill="currentColor" />
                   </svg>
                   Watch 2-min demo
@@ -615,7 +655,7 @@ export default function LandingPage() {
                     4,000+ Nigerian educators
                   </div>
                   <div className="text-xs text-yellow-500">
-                    ★★★★★{" "}
+                    <span aria-hidden="true">★★★★★</span>{" "}
                     <span className="text-gray-400">4.9 · 200+ reviews</span>
                   </div>
                 </div>
@@ -667,8 +707,12 @@ export default function LandingPage() {
           <p className="text-xs font-medium text-gray-400 text-center mb-3 uppercase tracking-widest">
             Aligned with curricula across
           </p>
+          <p className="sr-only">
+            Lagos, Oyo, Kano, Rivers, Kaduna, Enugu, FCT Abuja, Anambra, Ogun,
+            Cross River, Edo and Plateau States.
+          </p>
         </div>
-        <div className="overflow-hidden">
+        <div className="overflow-hidden" aria-hidden="true">
           <div
             className="flex gap-6 items-center animate-marquee whitespace-nowrap"
             style={{ width: "max-content" }}
@@ -738,12 +782,7 @@ export default function LandingPage() {
       <section className="py-20 lg:py-28 px-5 lg:px-8" id="use-cases">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-lg mb-14">
-            <div
-              className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full mb-4"
-              style={{ background: "#F3F4F6", color: "#374151" }}
-            >
-              ✦ Use cases
-            </div>
+            <SectionEyebrow index="02" />
             <h2
               className="font-display font-bold text-gray-900 mb-4"
               style={{
@@ -767,7 +806,7 @@ export default function LandingPage() {
             {useCases.slice(0, 2).map((uc, i) => (
               <div
                 key={i}
-                className="rounded-2xl p-7"
+                className="rounded-2xl p-7 transition-transform duration-200 hover-lift"
                 style={
                   uc.dark
                     ? {
@@ -780,6 +819,7 @@ export default function LandingPage() {
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center mb-5"
                   style={{ background: uc.iconBg, color: uc.iconColor }}
+                  aria-hidden="true"
                 >
                   {uc.icon}
                 </div>
@@ -812,24 +852,25 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* Small cards grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Feature ledger — numbered rows continue the section's index
+              system instead of repeating the icon-square card template. */}
+          <div className="border-t" style={{ borderColor: "#E5E7EB" }}>
             {useCases.slice(2).map((uc, i) => (
               <div
                 key={i}
-                className="rounded-2xl p-5"
-                style={{ background: "white", border: "1px solid #E5E7EB" }}
+                className="grid sm:grid-cols-[3rem_1fr] md:grid-cols-[3rem_16rem_1fr] gap-x-6 gap-y-1.5 py-5 border-b sm:items-baseline"
+                style={{ borderColor: "#E5E7EB" }}
               >
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
-                  style={{ background: uc.iconBg, color: uc.iconColor }}
+                <span
+                  className="font-mono text-xs"
+                  style={{ color: "#C7C2D6" }}
                 >
-                  {uc.icon}
-                </div>
-                <h3 className="font-display font-semibold text-sm text-gray-900 mb-1.5">
+                  {String(i + 3).padStart(2, "0")}
+                </span>
+                <h3 className="font-display font-semibold text-gray-900">
                   {uc.title}
                 </h3>
-                <p className="text-xs leading-relaxed text-gray-500">
+                <p className="text-sm leading-relaxed text-gray-500 max-w-md">
                   {uc.desc}
                 </p>
               </div>
@@ -845,12 +886,9 @@ export default function LandingPage() {
         id="how"
       >
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <div
-              className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full mb-4"
-              style={{ background: "#F3F4F6", color: "#374151" }}
-            >
-              How it works
+          <div className="max-w-lg mx-auto text-center mb-14">
+            <div className="flex justify-center">
+              <SectionEyebrow index="03" />
             </div>
             <h2
               className="font-display font-bold text-gray-900"
@@ -1070,12 +1108,7 @@ export default function LandingPage() {
       >
         <div className="max-w-6xl mx-auto">
           <div className="max-w-xl mb-16">
-            <div
-              className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full mb-4"
-              style={{ background: "rgba(20,184,166,0.15)", color: "#14B8A6" }}
-            >
-              ✦ Why SabiNote
-            </div>
+            <SectionEyebrow index="04" dark />
             <h2
               className="font-display font-bold text-white"
               style={{
@@ -1331,12 +1364,9 @@ export default function LandingPage() {
       {/* ── PRICING ───────────────────────────────────────── */}
       <section className="py-20 lg:py-28 px-5 lg:px-8 bg-white" id="pricing">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <div
-              className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full mb-4"
-              style={{ background: "#F3F4F6", color: "#374151" }}
-            >
-              💰 Simple pricing
+          <div className="max-w-lg mx-auto text-center mb-12">
+            <div className="flex justify-center">
+              <SectionEyebrow index="05" />
             </div>
             <h2
               className="font-display font-bold text-gray-900 mb-3"
@@ -1430,7 +1460,7 @@ export default function LandingPage() {
             ].map((pkg, i) => (
               <div
                 key={i}
-                className="rounded-2xl p-7 relative"
+                className="rounded-2xl p-7 relative transition-transform duration-200 hover-lift"
                 style={
                   pkg.featured
                     ? {
@@ -1494,6 +1524,7 @@ export default function LandingPage() {
                           fill="none"
                           stroke={pkg.featured ? "white" : "#641BC4"}
                           strokeWidth="3"
+                          aria-hidden="true"
                         >
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
@@ -1532,12 +1563,9 @@ export default function LandingPage() {
         style={{ background: "#FAFAFA" }}
       >
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <div
-              className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1 rounded-full mb-4"
-              style={{ background: "#F3F4F6", color: "#374151" }}
-            >
-              ❤ Loved by educators
+          <div className="max-w-lg mx-auto text-center mb-12">
+            <div className="flex justify-center">
+              <SectionEyebrow index="06" />
             </div>
             <h2
               className="font-display font-bold text-gray-900"
@@ -1555,10 +1583,16 @@ export default function LandingPage() {
             {testimonials.map((t, i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl p-6"
+                className="bg-white rounded-2xl p-6 transition-transform duration-200 hover-lift"
                 style={{ border: "1px solid #E5E7EB" }}
               >
-                <div className="text-yellow-400 mb-4 text-sm">★★★★★</div>
+                <div
+                  className="text-yellow-400 mb-4 text-sm"
+                  aria-hidden="true"
+                >
+                  ★★★★★
+                </div>
+                <span className="sr-only">5 out of 5 stars</span>
                 <p className="text-gray-700 text-sm leading-relaxed italic mb-5">
                   "{t.quote}"
                 </p>

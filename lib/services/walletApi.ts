@@ -54,6 +54,20 @@ export const walletApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/wallet/topup/verify", method: "POST", body }),
       invalidatesTags: ["Wallet", "Transactions"],
     }),
+
+    // TODO: TEMPORARY — Remove once Paystack checkout is wired back in.
+    // Mirrors the backend's temporary /wallet/topup/manual endpoint, which
+    // credits the wallet directly without a payment provider.
+    manualTopup: build.mutation<
+      {
+        success: boolean;
+        data: { reference: string; newBalance: number; parats: number; package: WalletPackage };
+      },
+      { packageId: string }
+    >({
+      query: (body) => ({ url: "/wallet/topup/manual", method: "POST", body }),
+      invalidatesTags: ["Wallet", "Transactions"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -64,4 +78,5 @@ export const {
   useGetTransactionsQuery,
   useInitiateTopupMutation,
   useVerifyTopupMutation,
+  useManualTopupMutation,
 } = walletApi;
